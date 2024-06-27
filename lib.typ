@@ -1,7 +1,7 @@
 #import "@preview/cetz:0.2.2"
-#import "default.typ": default
-#import "utils.typ"
-#import "drawer.typ"
+#import "src/default.typ": default
+#import "src/utils.typ"
+#import "src/drawer.typ"
 
 
 /// Build a molecule group based on mol
@@ -189,6 +189,7 @@
 /// Draw a dashed cram between two molecules with the arrow pointing to the left
 #let dashed-cram-left = build-link((length, args) => dashed-cram((length,0), (0,0), length, args))
 
+/// setup a molecule skeleton drawer
 #let skeletize(
 	debug: false,
 	background: none,
