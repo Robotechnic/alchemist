@@ -12,7 +12,7 @@
 	} else {
 		angle
 	}
-	angle > from and angle < to
+	angle >= from and angle < to
 }
 
 #let angle-to-anchor(angle) = {
@@ -30,24 +30,18 @@
 }
 
 #let link-anchor(angle, end) = {
-	if angle < 45deg and angle > -45deg {
+	if angle-in-range(angle, 85deg, 95deg) or angle-in-range(angle, 265deg, 275deg) {
+		"center"
+	} else if angle > -90deg and angle < 90deg {
 		if end {
 			0
 		} else {
 			-1
 		}
-	} else if angle-in-range(angle, 45deg, 135deg) {
-		"center"
-	} else if angle-in-range(angle, 135deg, 225deg) {
-		if end {
-			1
-		} else {
-			0
-		}
-	} else if angle-in-range(angle, 225deg, 315deg) {
-		"center"
+	} else if end {
+		-1
 	} else {
-		panic("Unknown angle " + str(angle.deg()))
+		0
 	}
 }
 
