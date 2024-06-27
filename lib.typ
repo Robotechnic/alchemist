@@ -49,13 +49,13 @@
 				let radius = (x2 - x1) / 2
 				radius += radius * 0.4
 				// this circle is used to connect the links to molecules
-				draw.hide(
 					draw.circle(
 						name: "radius" + name, 
 						name,
 						radius: (radius, .6em),
+						fill: none,
+						stroke: none
 					)
-				)
 			})
 			id += 1
 	})
@@ -189,32 +189,26 @@
 /// Draw a dashed cram between two molecules with the arrow pointing to the left
 #let dashed-cram-left = build-link((length, args) => dashed-cram((length,0), (0,0), length, args))
 
+#let branch(body) = {
+	((type: "branch", draw: body),)
+}
+
 /// setup a molecule skeleton drawer
 #let skeletize(
 	debug: false,
 	background: none,
-	config: default,
+	config: (:),
 	body
-) = {		
+) = {
+	for (key, value) in default {
+		if config.at(key, default: none) == none {
+			config.insert(key, value)
+		}
+	}
 	cetz.canvas(
 		debug: debug,
 		background: background,
 		drawer.draw-skeleton(config: config, body)
 	)
 }
-
-#skeletize({
-	single(angle:1, to: 0)
-	molecule("H_2O")
-	double(angle:-0)
-	molecule("H")
-	cram-filled-right()
-	molecule("C")
-	cram-filled-left()
-	cram-holow-left()
-	cram-holow-right()
-	dashed-cram-right()
-	molecule("H")
-	dashed-cram-left()
-})
 
