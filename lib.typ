@@ -183,8 +183,14 @@
 /// Draw a dashed cram between two molecules with the arrow pointing to the left
 #let dashed-cram-left = build-link((length, args) => dashed-cram((length,0), (0,0), length, args))
 
+/// Create a branch from the current molecule
 #let branch(body) = {
 	((type: "branch", draw: body),)
+}
+
+/// Create a regular cycle of molecules
+#let cycle(arc: none, faces, body) = {
+	((type: "cycle", arc: arc, faces: faces, draw: body),)
 }
 
 /// setup a molecule skeleton drawer

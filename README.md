@@ -3,7 +3,6 @@
 <!--EXAMPLE(links)-->
 ````typ
 #skeletize({
-  import cetz.draw : *
   molecule(name: "A", "A")
   single()
   molecule("B")
@@ -30,3 +29,5 @@
   ))
 })
 ````
+![links](https://raw.githubusercontent.com/Robotechnic/alchemist/master/images/links1.png)
+
