@@ -1,7 +1,6 @@
-# alchemist
-
-<!--EXAMPLE(links)-->
-````typ
+#import "@preview/alchemist:0.1.0":*
+#context{
+let render = [
 #skeletize({
   import cetz.draw : *
   molecule(name: "A", "A")
@@ -29,4 +28,8 @@
     "Z": single()
   ))
 })
-````
+]
+let dimensions = measure(render)
+set page(width: dimensions.width + 1pt, height: dimensions.height + 10pt, margin: 0cm, fill: white)
+render
+}
