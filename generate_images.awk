@@ -27,7 +27,7 @@ match($0,/^<!--EXAMPLE\((.*)\)-->$/,group) {
 /^````typ$/ {
     if (in_example) {
         capturing = 1
-		print "#import \"@preview/alchemist:0.1.0\"" > "images/" name ".typ"
+		print "#import \"@preview/alchemist:0.1.0\":*" > "images/" name ".typ"
 		print "#context{" >> "images/" name ".typ"
 		print "let render = [" >> "images/" name ".typ"
         next
