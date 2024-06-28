@@ -10,3 +10,21 @@
 		float(num)
 	}
 }
+
+/// Convert any angle to an angle between -360deg and 360deg
+#let angle-correction(angle) = {
+	calc.rem(angle.deg(), 360) * 1deg
+}
+
+/// Check if the angle is in the range [from, to[
+#let angle-in-range(angle, from, to) = {
+	if to < from {
+		panic("angle-in-range: The 'to' angle must be greater than the 'from' angle")
+	}
+	angle = if angle < 0deg {
+		angle + 360deg
+	} else {
+		angle
+	}
+	angle >= from and angle < to
+}
