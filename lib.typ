@@ -5,11 +5,17 @@
 
 
 /// Build a molecule group based on mol
-/// Each molecule is represented as an opinal count folowed by a molecule name
+/// Each molecule is represented as an optional count followed by a molecule name
 /// starting by a capital letter followed by an optional indice
 /// Example: "H_2O", "2Aa_7 3Bb"
+/// The name of the molecule is the cetz name of the molecule
+/// and the name used to link other molecules to it
+/// The links are a list of links between this molecule and the previous one
+/// the key is the name of the molecule and the value is the link you want to draw between the two molecules
+/// note that the length and angle arguments are ignored
 #let molecule(
 	name: none,
+	links: (:),
 	mol
 ) = {
 	let aux(str) = {
@@ -61,7 +67,8 @@
 	})
 	((type: "molecule",
 	  name: name,
-	  draw: cetz-content, 
+	  draw: cetz-content,
+		links: links,
 		count: id),)
 }
 
@@ -75,7 +82,13 @@
 		}
 		((
 		type: "link",
-		draw: (length) => draw-function(length, args.named()),
+		draw: (length, override:(:)) => {
+			let args = args.named()
+			for (key, val) in override {
+				args.insert(key, val)
+			}
+			draw-function(length, args)
+		},
 		..args.named()
 	),)}
 }
@@ -105,43 +118,24 @@
 	line((0,0), (length,0), stroke: args.at("stroke", default: black))
 })
 
-/// Draw a triangle between two molecules
-#let cram(from, to, args) = {
-	import cetz.draw : *
-
-	get-ctx(ctx => {
-		let (ctx, (from-x,from-y,_)) = cetz.coordinate.resolve(ctx, from)
-		let (ctx, (to-x, to-y,_)) = cetz.coordinate.resolve(ctx, to)
-		let base-length = utils.convert-length(ctx,args.at("base-length", default: .8em))
-		line(
-			(from-x, from-y - base-length / 2),
-			(from-x, from-y + base-length / 2),
-			(to-x, to-y),
-			close: true,
-			stroke: args.at("stroke", default: none),
-			fill: args.at("fill", default: black)
-		)
-	})
-}
-
 /// Draw a filled cram between two molecules with the arrow pointing to the right
-#let cram-filled-right = build-link((length, args) => cram((0,0), (length,0), args))
+#let cram-filled-right = build-link((length, args) => drawer.cram((0,0), (length,0), args))
 
 /// Draw a filled cram between two molecules with the arrow pointing to the left
-#let cram-filled-left = build-link((length, args) => cram((length,0), (0,0), args))
+#let cram-filled-left = build-link((length, args) => drawer.cram((length,0), (0,0), args))
 
 /// Draw a holow cram between two molecules with the arrow pointing to the right
 #let cram-holow-right = build-link((length, args) => {
 	args.fill = none
 	args.stroke = args.at("stroke", default: black)
-	cram((0,0), (length,0), args)
+	drawer.cram((0,0), (length,0), args)
 })
 
 /// Draw a holow cram between two molecules with the arrow pointing to the left
 #let cram-holow-left = build-link((length, args) => {
 	args.fill = none
 	args.stroke = args.at("stroke", default: black)
-	cram((length,0), (0,0), args)
+	drawer.cram((length,0), (0,0), args)
 })
 
 #let dashed-cram(from, to, length, args) = {
@@ -208,7 +202,7 @@
 	cetz.canvas(
 		debug: debug,
 		background: background,
-		drawer.draw-skeleton(config: config, body)
+		drawer.draw-skeleton(config: config, body).at(0)
 	)
 }
 
