@@ -2,7 +2,6 @@
 #context{
 let render = [
 #skeletize({
-  import cetz.draw : *
   molecule(name: "A", "A")
   single()
   molecule("B")
