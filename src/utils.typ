@@ -12,8 +12,14 @@
 }
 
 /// Convert any angle to an angle between -360deg and 360deg
-#let angle-correction(angle) = {
-	calc.rem(angle.deg(), 360) * 1deg
+#let angle-correction(a) = {
+	if type(a) == angle {
+		a = a.deg()
+	}
+	if type(a) != float and type(a) != int {
+		panic("angle-correction: The angle must be a number or an angle")
+	}
+	calc.rem(a, 360) * 1deg
 }
 
 /// Check if the angle is in the range [from, to[
