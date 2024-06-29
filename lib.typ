@@ -102,20 +102,56 @@
 /// Draw a double line between two molecules
 #let double = build-link((length, args) => {
 	import cetz.draw : *
-	translate((0,-.1em))
-	line((0,0), (length,0), stroke: args.at("stroke", default: black))
-	translate((0,.2em))
-	line((0,0), (length,0), stroke: args.at("stroke", default: black))
+	get-ctx(ctx => {
+		let gap = utils.convert-length(ctx, args.at("gap", default: .25em)) / 2
+		let offset = args.at("offset", default: "center")
+		let coeff = args.at("offset-coeff", default: 0.85)
+		if coeff < 0 or coeff > 1 {
+			panic("Invalid offset-coeff value: must be between 0 and 1")
+		}
+		if offset == "left" {
+			translate((0,-gap))
+		} else if offset == "right" {
+			translate((0,gap))
+		} else if offset == "center" {}
+		else {
+			panic("Invalid offset value: must be \"left\", \"right\" or \"center\"")
+		}
+
+		translate((0,-gap))
+		line(
+			..if offset == "left" {
+				let x = length * (1 - coeff) / 2
+				((x, 0), (x + length * coeff, 0))
+			} else {
+				((0,0), (length,0))
+			},
+			stroke: args.at("stroke", default: black)
+		)
+		translate((0,2 * gap))
+		line(
+			..if offset == "right" {
+				let x = length * (1 - coeff) / 2
+				((x, 0), (x + length * coeff, 0))
+			} else {
+				((0,0), (length,0))
+			},
+			stroke: args.at("stroke", default: black)
+		)
+	})
 })
 
 /// Draw a triple line between two molecules
 #let triple = build-link((length, args) => {
 	import cetz.draw : *
-	line((0,0), (length,0), stroke: args.at("stroke", default: black))
-	translate((0, -.2em))
-	line((0,0), (length,0), stroke: args.at("stroke", default: black))
-	translate((0, .4em))
-	line((0,0), (length,0), stroke: args.at("stroke", default: black))
+	get-ctx(ctx => {
+		let gap = utils.convert-length(ctx, args.at("gap", default: .25em))
+		line((0,0), (length,0), stroke: args.at("stroke", default: black))
+		translate((0, -gap))
+		line((0,0), (length,0), stroke: args.at("stroke", default: black))
+		translate((0, 2 * gap))
+		line((0,0), (length,0), stroke: args.at("stroke", default: black))
+	})
 })
 
 /// Draw a filled cram between two molecules with the arrow pointing to the right
@@ -189,8 +225,11 @@
 }
 
 /// Create a regular cycle of molecules
-#let cycle(arc: none, faces, body) = {
-	((type: "cycle", arc: arc, faces: faces, draw: body),)
+#let cycle(..args) = {
+	if args.pos().len() != 2 {
+		panic("Cycle takes two positional arguments: number of faces and body")
+	}
+	((type: "cycle", faces: args.pos().at(0), draw: args.pos().at(1), ..args.named()),)
 }
 
 /// setup a molecule skeleton drawer
