@@ -34,3 +34,8 @@
 	}
 	angle >= from and angle < to
 }
+
+/// translate along the y axis rotated by angle
+#let rotated(angle, y) = {
+	(y * calc.sin(-angle), y * calc.cos(angle))
+}
