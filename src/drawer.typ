@@ -72,6 +72,7 @@
 	}
 }
 
+
 #let angle-from-ctx(ctx, object, default) = {
 	if object.at("relative", default: none) != none {
 		object.at("relative") + ctx.relative-angle
@@ -93,61 +94,57 @@
 }
 
 /// Draw a triangle between two molecules
-#let cram(from, to, args) = {
+#let cram(from, to, ctx, args) = {
 	import cetz.draw : *
 
-	get-ctx(ctx => {
-		let (ctx, (from-x,from-y,_)) = cetz.coordinate.resolve(ctx, from)
-		let (ctx, (to-x, to-y,_)) = cetz.coordinate.resolve(ctx, to)
-		let base-length = utils.convert-length(ctx,args.at("base-length", default: .8em))
-		line(
-			(from-x, from-y - base-length / 2),
-			(from-x, from-y + base-length / 2),
-			(to-x, to-y),
-			close: true,
-			stroke: args.at("stroke", default: none),
-			fill: args.at("fill", default: black)
-		)
-	})
+	let (ctx, (from-x,from-y,_)) = cetz.coordinate.resolve(ctx, from)
+	let (ctx, (to-x, to-y,_)) = cetz.coordinate.resolve(ctx, to)
+	let base-length = utils.convert-length(ctx,args.at("base-length", default: .8em))
+	line(
+		(from-x, from-y - base-length / 2),
+		(from-x, from-y + base-length / 2),
+		(to-x, to-y),
+		close: true,
+		stroke: args.at("stroke", default: none),
+		fill: args.at("fill", default: black)
+	)
 }
 
 /// Draw a dashed triangle between two molecules
-#let dashed-cram(from, to, length, args) = {
+#let dashed-cram(from, to, length, ctx, args) = {
 	import cetz.draw : *
-	get-ctx(ctx => {
-		let (ctx, (from-x,from-y,_)) = cetz.coordinate.resolve(ctx, from)
-		let (ctx, (to-x, to-y,_)) = cetz.coordinate.resolve(ctx, to)
-		let base-length = utils.convert-length(ctx,args.at("base-length", default: .8em))
-		hide({
-			line(
-				name: "top",
-				(from-x, from-y - base-length / 2),
-				(to-x, to-y - 0.05)
-			)
-			line(
-				name: "bottom",
-				(from-x, from-y + base-length / 2),
-				(to-x, to-y + 0.05)
-			)
-		})
-		let dash-sep = utils.convert-length(ctx,args.at("dash-sep", default: .3em))
-		let dash-width = args.at("dash-width", default: .05em)
-		let converted-dash-width = utils.convert-length(ctx,dash-width)
-		let length = utils.convert-length(ctx,length)
-
-		let dash-count = int(calc.ceil(length / (dash-sep + converted-dash-width)))
-		let incr = 100% / dash-count
-
-		let percentage = 0%
-		while percentage <= 100% {
-			line(
-				(name: "top", anchor: percentage),
-				(name: "bottom", anchor: percentage),
-				stroke: args.at("stroke", default: black) + dash-width
-			)
-			percentage += incr
-		}
+	let (ctx, (from-x,from-y,_)) = cetz.coordinate.resolve(ctx, from)
+	let (ctx, (to-x, to-y,_)) = cetz.coordinate.resolve(ctx, to)
+	let base-length = utils.convert-length(ctx,args.at("base-length", default: .8em))
+	hide({
+		line(
+			name: "top",
+			(from-x, from-y - base-length / 2),
+			(to-x, to-y - 0.05)
+		)
+		line(
+			name: "bottom",
+			(from-x, from-y + base-length / 2),
+			(to-x, to-y + 0.05)
+		)
 	})
+	let dash-sep = utils.convert-length(ctx,args.at("dash-sep", default: .3em))
+	let dash-width = args.at("dash-width", default: .05em)
+	let converted-dash-width = utils.convert-length(ctx,dash-width)
+	let length = utils.convert-length(ctx,length)
+
+	let dash-count = int(calc.ceil(length / (dash-sep + converted-dash-width)))
+	let incr = 100% / dash-count
+
+	let percentage = 0%
+	while percentage <= 100% {
+		line(
+			(name: "top", anchor: percentage),
+			(name: "bottom", anchor: percentage),
+			stroke: args.at("stroke", default: black) + dash-width
+		)
+		percentage += incr
+	}
 }
 
 #let draw-molecule-text(mol) = {
@@ -166,26 +163,6 @@
 			eq
 		)
 		id += 1
-	}
-}
-
-#let draw-molecule-radius(molname, mol) = {
-	for id in range(mol.count) {
-		let name = molname + "." + str(id)
-		draw.get-ctx(ctx => {
-			let (ctx, (x1,_,_), (x2,_,_)) = cetz.coordinate.resolve(ctx, name + ".west", name + ".east")
-			let radius = (x2 - x1) / 2
-			radius += radius * 0.4
-			// this circle is used to connect the links to molecules
-			draw.hide(
-				draw.circle(
-					name: molname + "-radius-" + str(id), 
-					name,
-					radius: (radius, .6em),
-					fill: none,
-				)
-			)
-		})
 	}
 }
 
@@ -235,7 +212,6 @@
 					}
 				}
 			)
-			draw-molecule-radius(name, mol)
 		}
 	)
 }
@@ -408,12 +384,12 @@
 	}, ctx)
 }
 
-#let ellipse-anchor(cetz-ctx, angle, ellipse) = {
-	let (cetz-ctx, (x,y,_)) = cetz.coordinate.resolve(cetz-ctx, ellipse)
-	let (cetz-ctx, (_,b,_)) = cetz.coordinate.resolve(cetz-ctx, ellipse + ".north")
-	let (cetz-ctx, (a,_,_)) = cetz.coordinate.resolve(cetz-ctx, ellipse + ".east")
-	let a = a - x
-	let b = b - y
+#let molecule-anchor(cetz-ctx, angle, molecule, id) = {
+	let (cetz-ctx, (x,y,_)) = cetz.coordinate.resolve(cetz-ctx, (name: molecule, anchor: id))
+	let (cetz-ctx, (_,b,_)) = cetz.coordinate.resolve(cetz-ctx, (name: molecule, anchor: (id, "north")))
+	let (cetz-ctx, (a,_,_)) = cetz.coordinate.resolve(cetz-ctx, (name: molecule, anchor: (id, "east")))
+	let a = (a - x) * 1.2
+	let b = (b - y) * 2
 	if a == 0 or b == 0 {
 		panic("Ellipse " + ellipse + " has no width or height")
 	}
@@ -430,7 +406,7 @@
 			link.to = link-molecule-index(angle, true, ctx.named-molecules.at(link.to-name).count - 1)
 		}
 		(
-			(ellipse-anchor(cetz-ctx, link.angle, link.from-name + "-radius-" + str(link.from)), ellipse-anchor(cetz-ctx, link.angle + 180deg, link.to-name + "-radius-" + str(link.to))), link.angle
+			(molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)), molecule-anchor(cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))), link.angle
 		)
 	} else if link.to-name != none {
 		let to-pos = (name: link.to-name, anchor: "center")
@@ -440,12 +416,12 @@
 			link.to = link-molecule-index(angle, true, ctx.named-molecules.at(link.to-name).count - 1)
 		}
 		(
-			(link.from-pos, ellipse-anchor(cetz-ctx, link.angle + 180deg, link.to-name + "-radius-" + str(link.to))),
+			(link.from-pos, molecule-anchor(cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))),
 			link.angle
 		)
 	} else if link.from-name != none {
 		(
-			(ellipse-anchor(cetz-ctx, link.angle, link.from-name + "-radius-" + str(link.from)), (name: link.name, anchor: "end")),
+			(molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)), (name: link.name, anchor: "end")),
 			link.angle
 		)
 	} else {
@@ -464,7 +440,7 @@
 					group(name: "decorations", {
 						set-origin(from)
 						rotate(angle)
-						(link.draw)(length, override:link.override)
+						(link.draw)(length, cetz-ctx, override:link.override)
 					})
 				}
 		}),
