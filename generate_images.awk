@@ -29,7 +29,7 @@ match($0,/^<!--EXAMPLE\((.*)\)-->$/,group) {
         capturing = 1
 		print "#import \"@preview/alchemist:0.1.0\":*" > "images/" name ".typ"
 		print "#context{" >> "images/" name ".typ"
-		print "let render = [" >> "images/" name ".typ"
+		print "let render = [#h(.02em)" >> "images/" name ".typ"
         next
     }
 }
@@ -40,7 +40,7 @@ match($0,/^<!--EXAMPLE\((.*)\)-->$/,group) {
         in_example = 0
 		print "]" >> "images/" name ".typ"
 		print "let dimensions = measure(render)" >> "images/" name ".typ"
-		print "set page(width: dimensions.width + 1pt, height: dimensions.height + 10pt, margin: 0cm, fill: white)" >> "images/" name ".typ"
+		print "set page(width: dimensions.width + 1pt, height: dimensions.height + 2pt, margin: 0cm, fill: white)" >> "images/" name ".typ"
 		print "render" >> "images/" name ".typ"
 		print "}" >> "images/" name ".typ"
 		system("typst compile -f png \"images/" name ".typ\" \"images/" name "{n}.png\"")

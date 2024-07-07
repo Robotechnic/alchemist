@@ -132,15 +132,15 @@
 /// Draw a filled cram between two molecules with the arrow pointing to the left
 #let cram-filled-left = build-link((length, ctx, args) => drawer.cram((length, 0), (0,0), ctx, args))
 
-/// Draw a holow cram between two molecules with the arrow pointing to the right
-#let cram-holow-right = build-link((length, ctx, args) => {
+/// Draw a hollow cram between two molecules with the arrow pointing to the right
+#let cram-hollow-right = build-link((length, ctx, args) => {
 	args.fill = none
 	args.stroke = args.at("stroke", default: black)
 	drawer.cram((0,0), (length,0), ctx, args)
 })
 
-/// Draw a holow cram between two molecules with the arrow pointing to the left
-#let cram-holow-left = build-link((length, ctx, args) => {
+/// Draw a hollow cram between two molecules with the arrow pointing to the left
+#let cram-hollow-left = build-link((length, ctx, args) => {
 	args.fill = none
 	args.stroke = args.at("stroke", default: black)
 	drawer.cram((length, 0), (0,0), ctx, args)

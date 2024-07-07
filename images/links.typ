@@ -1,6 +1,6 @@
 #import "@preview/alchemist:0.1.0":*
 #context{
-let render = [
+let render = [#h(.02em)
 #skeletize({
   molecule(name: "A", "A")
   single()
@@ -29,6 +29,6 @@ let render = [
 })
 ]
 let dimensions = measure(render)
-set page(width: dimensions.width + 1pt, height: dimensions.height + 10pt, margin: 0cm, fill: white)
+set page(width: dimensions.width + 1pt, height: dimensions.height + 2pt, margin: 0cm, fill: white)
 render
 }
