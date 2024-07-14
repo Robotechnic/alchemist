@@ -39,16 +39,19 @@
 
 /// get the angle between two anchors
 #let angle-between(ctx, from, to) = {
-  let (ctx, (from-x, from-y, _),) = cetz.coordinate.resolve(ctx, from)
-  let (ctx, (to-x, to-y, _),) = cetz.coordinate.resolve(ctx, to)
+  let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
+  let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
   let angle = calc.atan2(to-x - from-x, to-y - from-y)
   angle
 }
 
 /// get the distance between two anchors
 #let distance-between(ctx, from, to) = {
-  let (ctx, (from-x, from-y, _),) = cetz.coordinate.resolve(ctx, from)
-  let (ctx, (to-x, to-y, _),) = cetz.coordinate.resolve(ctx, to)
-  let distance = calc.sqrt(calc.pow(to-x - from-x, 2) + calc.pow(to-y - from-y, 2))
+  let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
+  let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
+  let distance = calc.sqrt(calc.pow(to-x - from-x, 2) + calc.pow(
+    to-y - from-y,
+    2,
+  ))
   distance
 }

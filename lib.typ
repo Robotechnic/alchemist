@@ -32,7 +32,15 @@
     mol = mol.slice(end)
     molecules.push(eq)
   }
-  ((type: "molecule", name: name, molecules: molecules, links: links, count: molecules.len()),)
+  (
+    (
+      type: "molecule",
+      name: name,
+      molecules: molecules,
+      links: links,
+      count: molecules.len(),
+    ),
+  )
 }
 
 /// Create a link function that is hen used to draw a link between two points
@@ -43,25 +51,31 @@
     if args.pos().len() != 0 {
       panic("Links takes no positional arguments")
     }
-    ((type: "link", draw: (length, ctx, override: (:)) => {
-      let args = args.named()
-      for (key, val) in override {
-        args.insert(key, val)
-      }
-      draw-function(length, ctx, args)
-    }, ..args.named()),)
+    (
+      (
+        type: "link",
+        draw: (length, ctx, override: (:)) => {
+          let args = args.named()
+          for (key, val) in override {
+            args.insert(key, val)
+          }
+          draw-function(length, ctx, args)
+        },
+        ..args.named(),
+      ),
+    )
   }
 }
 
 /// Draw a single line between two molecules
 #let single = build-link((length, _, args) => {
-  import cetz.draw : *
+  import cetz.draw: *
   line((0, 0), (length, 0), stroke: args.at("stroke", default: black))
 })
 
 /// Draw a double line between two molecules
 #let double = build-link((length, ctx, args) => {
-  import cetz.draw : *
+  import cetz.draw: *
   let gap = utils.convert-length(ctx, args.at("gap", default: .25em)) / 2
   let offset = args.at("offset", default: "center")
   let coeff = args.at("offset-coeff", default: 0.85)
@@ -72,29 +86,35 @@
     translate((0, -gap))
   } else if offset == "right" {
     translate((0, gap))
-  } else if offset == "center" {} else {
+  } else if offset == "center" { } else {
     panic("Invalid offset value: must be \"left\", \"right\" or \"center\"")
   }
 
   translate((0, -gap))
-  line(..if offset == "left" {
-    let x = length * (1 - coeff) / 2
-    ((x, 0), (x + length * coeff, 0))
-  } else {
-    ((0, 0), (length, 0))
-  }, stroke: args.at("stroke", default: black))
+  line(
+    ..if offset == "left" {
+      let x = length * (1 - coeff) / 2
+      ((x, 0), (x + length * coeff, 0))
+    } else {
+      ((0, 0), (length, 0))
+    },
+    stroke: args.at("stroke", default: black),
+  )
   translate((0, 2 * gap))
-  line(..if offset == "right" {
-    let x = length * (1 - coeff) / 2
-    ((x, 0), (x + length * coeff, 0))
-  } else {
-    ((0, 0), (length, 0))
-  }, stroke: args.at("stroke", default: black))
+  line(
+    ..if offset == "right" {
+      let x = length * (1 - coeff) / 2
+      ((x, 0), (x + length * coeff, 0))
+    } else {
+      ((0, 0), (length, 0))
+    },
+    stroke: args.at("stroke", default: black),
+  )
 })
 
 /// Draw a triple line between two molecules
 #let triple = build-link((length, ctx, args) => {
-  import cetz.draw : *
+  import cetz.draw: *
   let gap = utils.convert-length(ctx, args.at("gap", default: .25em))
   line((0, 0), (length, 0), stroke: args.at("stroke", default: black))
   translate((0, -gap))
@@ -104,10 +124,20 @@
 })
 
 /// Draw a filled cram between two molecules with the arrow pointing to the right
-#let cram-filled-right = build-link((length, ctx, args) => drawer.cram((0, 0), (length, 0), ctx, args))
+#let cram-filled-right = build-link((length, ctx, args) => drawer.cram(
+  (0, 0),
+  (length, 0),
+  ctx,
+  args,
+))
 
 /// Draw a filled cram between two molecules with the arrow pointing to the left
-#let cram-filled-left = build-link((length, ctx, args) => drawer.cram((length, 0), (0, 0), ctx, args))
+#let cram-filled-left = build-link((length, ctx, args) => drawer.cram(
+  (length, 0),
+  (0, 0),
+  ctx,
+  args,
+))
 
 /// Draw a hollow cram between two molecules with the arrow pointing to the right
 #let cram-hollow-right = build-link((length, ctx, args) => {
@@ -124,10 +154,22 @@
 })
 
 /// Draw a dashed cram between two molecules with the arrow pointing to the right
-#let cram-dashed-right = build-link((length, ctx, args) => drawer.dashed-cram((0, 0), (length, 0), length, ctx, args))
+#let cram-dashed-right = build-link((length, ctx, args) => drawer.dashed-cram(
+  (0, 0),
+  (length, 0),
+  length,
+  ctx,
+  args,
+))
 
 /// Draw a dashed cram between two molecules with the arrow pointing to the left
-#let cram-dashed-left = build-link((length, ctx, args) => drawer.dashed-cram((length, 0), (0, 0), length, ctx, args))
+#let cram-dashed-left = build-link((length, ctx, args) => drawer.dashed-cram(
+  (length, 0),
+  (0, 0),
+  length,
+  ctx,
+  args,
+))
 
 /// Create a branch from the current molecule
 #let branch(body) = {
@@ -139,7 +181,14 @@
   if args.pos().len() != 2 {
     panic("Cycle takes two positional arguments: number of faces and body")
   }
-  ((type: "cycle", faces: args.pos().at(0), draw: args.pos().at(1), ..args.named()),)
+  (
+    (
+      type: "cycle",
+      faces: args.pos().at(0),
+      draw: args.pos().at(1),
+      ..args.named(),
+    ),
+  )
 }
 
 /// setup a molecule skeleton drawer
@@ -149,6 +198,10 @@
       config.insert(key, value)
     }
   }
-  cetz.canvas(debug: debug, background: background, drawer.draw-skeleton(config: config, body))
+  cetz.canvas(
+    debug: debug,
+    background: background,
+    drawer.draw-skeleton(config: config, body),
+  )
 }
 
