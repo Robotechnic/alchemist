@@ -14,3 +14,6 @@ module:
 	cp ./*.typ ./alchemist/
 	cp ./src/*.typ ./alchemist/src/
 	awk '/<!--EXCLUDE-->/, /<!--END-->/ {next} 1' ./README.md > ./alchemist/README.md
+
+manual:
+	typst compile ./doc/manual.typ --root .
