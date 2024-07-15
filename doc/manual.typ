@@ -75,7 +75,21 @@ The main argument is a block of code that contains the drawing instructions. The
 
 == Configuration <config>
 
+Th configuration dictionary that you can pass to skeletize defines a set of default values for a lot of parameters in alchemist.
 
+#import "../src/default.typ" : default
+
+#argument("atom-sep", default: default.atom-sep, types: default.atom-sep)[
+	It defines the distance between each atom center. It is overridden by the `atom-sep` argument of link
+]
+
+#argument("angle-increment", default: default.angle-increment, types: default.angle-increment)[
+	It defines the angle added by each increment of the `angle` argument of link
+]
+
+#argument("base-angle", default: default.base-angle, types: default.base-angle)[
+	Default angle at which the link with no angle defined will be. 
+]
 
 == Available commands
 
@@ -87,8 +101,17 @@ The main argument is a block of code that contains the drawing instructions. The
   extract-headings: 3,
 )
 
+#tidy-module(
+  read("../src/links.typ"),
+  name: infos.package.name,
+  show-outline: false,
+  include-examples-scope: true,
+  extract-headings: 3,
+)
+
 = Drawing molecules
 
 == Basic drawing
+
 
 == Integration with cetz <exemple-cez>
