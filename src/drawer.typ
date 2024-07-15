@@ -124,12 +124,13 @@
       (to-x, to-y + 0.05),
     )
   })
-  let dash-sep = utils.convert-length(ctx, args.at("dash-sep", default: .3em))
-  let dash-width = args.at("dash-width", default: .05em)
+	let stroke = args.at("stroke", default: black + .05em)
+  let dash-gap = utils.convert-length(ctx, args.at("dash-gap", default: .3em))
+  let dash-width = stroke.thickness
   let converted-dash-width = utils.convert-length(ctx, dash-width)
   let length = utils.convert-length(ctx, length)
 
-  let dash-count = int(calc.ceil(length / (dash-sep + converted-dash-width)))
+  let dash-count = int(calc.ceil(length / (dash-gap + converted-dash-width)))
   let incr = 100% / dash-count
 
   let percentage = 0%
@@ -137,7 +138,7 @@
     line(
       (name: "top", anchor: percentage),
       (name: "bottom", anchor: percentage),
-      stroke: args.at("stroke", default: black) + dash-width,
+      stroke: stroke,
     )
     percentage += incr
   }
@@ -407,8 +408,8 @@
     cetz-ctx,
     (name: molecule, anchor: (id, "east")),
   )
-  let a = (a - x) * 1.2
-  let b = (b - y) * 2
+  let a = (a - x) * 1.5
+  let b = (b - y) * 2.2
   if a == 0 or b == 0 {
     panic("Ellipse " + ellipse + " has no width or height")
   }
@@ -496,6 +497,7 @@
           {
             set-origin(from)
             rotate(angle)
+						anchor("end", (length, 0))
             (link.draw)(length, cetz-ctx, override: link.override)
           },
         )
@@ -515,4 +517,18 @@
     draw
     links
   }
+}
+
+/// setup a molecule skeleton drawer
+#let skeletize(debug: false, background: none, config: (:), body) = {
+  for (key, value) in default {
+    if config.at(key, default: none) == none {
+      config.insert(key, value)
+    }
+  }
+  cetz.canvas(
+    debug: debug,
+    background: background,
+    draw-skeleton(config: config, body),
+  )
 }

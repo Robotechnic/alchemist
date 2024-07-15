@@ -2,16 +2,28 @@
 #import "src/default.typ": default
 #import "src/utils.typ"
 #import "src/drawer.typ"
+#import "src/drawer.typ" : skeletize
 
+/// === Molecule function
 /// Build a molecule group based on mol
 /// Each molecule is represented as an optional count followed by a molecule name
 /// starting by a capital letter followed by an optional indice
-/// Example: "H_2O", "2Aa_7 3Bb"
-/// The name of the molecule is the cetz name of the molecule
-/// and the name used to link other molecules to it
-/// The links are a list of links between this molecule and the previous one
-/// the key is the name of the molecule and the value is the link you want to draw between the two molecules
-/// note that the length and angle arguments are ignored
+/// #example(```
+/// #skeletize({
+///   molecule("H_2O")
+/// })
+///```)
+/// #example(```
+/// #skeletize({
+///   molecule("2Aa_7 3Bb")
+/// })
+///```)
+/// - name (string): The name of the molecule. It is used as the cetz name of the molecule and to link other molecules to it.
+/// - links (dictionary): The links between this molecule and the previous ones. The key is the name of the molecule and the value is the link you want to draw between the two molecules.
+///
+/// Note that the length and angle arguments are ignored
+/// - mol (string): The string representing the molecule
+/// -> drawable
 #let molecule(name: none, links: (:), mol) = {
   let aux(str) = {
     let match = str.match(regex("^ *([0-9]*[A-Z][a-z]*)(_[0-9]+)?"))
@@ -43,9 +55,12 @@
   )
 }
 
-/// Create a link function that is hen used to draw a link between two points
-/// The draw-function is a function that takes two points, the start and the end of the link
-/// and a dictionary of named arguments that can be used to configure the links
+/// === Link functions
+/// Create a link function that is then used to draw a link between two points
+///
+///
+/// - draw-function (function): The function that will be used to draw the link. It should takes three arguments: the length of the link, the context, and a dictionary of named arguments that can be used to configure the links
+/// -> function
 #let build-link(draw-function) = {
   (..args) => {
     if args.pos().len() != 0 {
@@ -68,12 +83,48 @@
 }
 
 /// Draw a single line between two molecules
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   single()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the color and width of the line
+/// with the `stroke` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   single(stroke: red + 5pt)
+///   molecule("B")
+/// })
+///```)
 #let single = build-link((length, _, args) => {
   import cetz.draw: *
   line((0, 0), (length, 0), stroke: args.at("stroke", default: black))
 })
 
 /// Draw a double line between two molecules
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   double()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the color and width of the line
+/// with the `stroke` argument and the gap between the two lines
+/// with the `gap` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   double(
+///     stroke: orange + 2pt,
+///     gap: .8em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let double = build-link((length, ctx, args) => {
   import cetz.draw: *
   let gap = utils.convert-length(ctx, args.at("gap", default: .25em)) / 2
@@ -113,6 +164,26 @@
 })
 
 /// Draw a triple line between two molecules
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   triple()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the color and width of the line
+/// with the `stroke` argument and the gap between the three lines
+/// with the `gap` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   triple(
+///     stroke: blue + .5pt,
+///     gap: .15em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let triple = build-link((length, ctx, args) => {
   import cetz.draw: *
   let gap = utils.convert-length(ctx, args.at("gap", default: .25em))
@@ -124,6 +195,26 @@
 })
 
 /// Draw a filled cram between two molecules with the arrow pointing to the right
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-filled-right()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the stroke and fill color of the arrow
+/// with the `stroke` and `fill` arguments. You can also change the base length of the arrow with the `base-length` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-filled-right(
+///     stroke: red + 2pt,
+///     fill: green,
+///     base-length: 2em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let cram-filled-right = build-link((length, ctx, args) => drawer.cram(
   (0, 0),
   (length, 0),
@@ -132,6 +223,26 @@
 ))
 
 /// Draw a filled cram between two molecules with the arrow pointing to the left
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-filled-left()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the stroke and fill color of the arrow
+/// with the `stroke` and `fill` arguments. You can also change the base length of the arrow with the `base-length` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-filled-left(
+///     stroke: red + 2pt,
+///     fill: green,
+///     base-length: 2em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let cram-filled-left = build-link((length, ctx, args) => drawer.cram(
   (length, 0),
   (0, 0),
@@ -140,6 +251,7 @@
 ))
 
 /// Draw a hollow cram between two molecules with the arrow pointing to the right
+/// It is a shorthand for `cram-filled-right(fill: none)`
 #let cram-hollow-right = build-link((length, ctx, args) => {
   args.fill = none
   args.stroke = args.at("stroke", default: black)
@@ -147,6 +259,7 @@
 })
 
 /// Draw a hollow cram between two molecules with the arrow pointing to the left
+/// It is a shorthand for `cram-filled-left(fill: none)`
 #let cram-hollow-left = build-link((length, ctx, args) => {
   args.fill = none
   args.stroke = args.at("stroke", default: black)
@@ -154,6 +267,26 @@
 })
 
 /// Draw a dashed cram between two molecules with the arrow pointing to the right
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-dashed-right()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the stroke of the lines in the arrow
+/// with the `stroke` argument. You can also change the base length of the arrow with the `base-length` argument and distance between the dashes with the `dash-gap` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-dashed-right(
+///     stroke: red + 2pt,
+///     base-length: 2em,
+///     dash-gap: .5em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let cram-dashed-right = build-link((length, ctx, args) => drawer.dashed-cram(
   (0, 0),
   (length, 0),
@@ -163,6 +296,26 @@
 ))
 
 /// Draw a dashed cram between two molecules with the arrow pointing to the left
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-dashed-left()
+///   molecule("B")
+/// })
+///```)
+/// It is possible to change the stroke of the lines in the arrow
+/// with the `stroke` argument. You can also change the base length of the arrow with the `base-length` argument and distance between the dashes with the `dash-gap` argument
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   cram-dashed-left(
+///     stroke: red + 2pt,
+///     base-length: 2em,
+///     dash-gap: .5em
+///   )
+///   molecule("B")
+/// })
+///```)
 #let cram-dashed-left = build-link((length, ctx, args) => drawer.dashed-cram(
   (length, 0),
   (0, 0),
@@ -171,12 +324,42 @@
   args,
 ))
 
-/// Create a branch from the current molecule
+/// === Branch and cycles
+/// Create a branch from the current molecule, the first element
+/// of the branch has to be a link
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   branch({
+///     single(angle:1)
+///     molecule("B")
+///   })
+///   branch({
+///     double(angle: -1)
+///     molecule("D")
+///   })
+///   single()
+///   double()
+///   single()
+///   molecule("C")
+/// })
+///```)
 #let branch(body) = {
   ((type: "branch", draw: body),)
 }
 
 /// Create a regular cycle of molecules
+/// #example(```
+/// #skeletize({
+///   cycle(5, {
+///     single()
+///     double()
+///     single()
+///     double()
+///     single()
+///   })
+/// })
+///```)
 #let cycle(..args) = {
   if args.pos().len() != 2 {
     panic("Cycle takes two positional arguments: number of faces and body")
@@ -190,18 +373,3 @@
     ),
   )
 }
-
-/// setup a molecule skeleton drawer
-#let skeletize(debug: false, background: none, config: (:), body) = {
-  for (key, value) in default {
-    if config.at(key, default: none) == none {
-      config.insert(key, value)
-    }
-  }
-  cetz.canvas(
-    debug: debug,
-    background: background,
-    drawer.draw-skeleton(config: config, body),
-  )
-}
-
