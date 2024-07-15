@@ -1,3 +1,7 @@
+check:
+	typst compile ./lib.typ
+	rm ./lib.pdf
+
 link :
 	mkdir -p ~/.cache/typst/packages/preview/alchemist
 	ln -s "$(CURDIR)" ~/.cache/typst/packages/preview/alchemist/0.1.0
