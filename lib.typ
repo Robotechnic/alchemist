@@ -22,7 +22,7 @@
 /// - name (string): The name of the molecule. It is used as the cetz name of the molecule and to link other molecules to it.
 /// - links (dictionary): The links between this molecule and the previous ones. The key is the name of the molecule and the value is the link you want to draw between the two molecules.
 ///
-/// Note that the length and angle arguments are ignored
+/// Note that the antom-sep and angle arguments are ignored
 /// - mol (string): The string representing the molecule
 /// -> drawable
 #let molecule(name: none, links: (:), mol) = {

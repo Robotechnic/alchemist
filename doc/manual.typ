@@ -2,6 +2,17 @@
 #import "@preview/alchemist:0.1.0"
 
 #let infos = toml("../typst.toml")
+#show: mantys.with(
+  ..infos,
+  abstract: [
+    Alchemist is a package used to draw chemical structures with skeletal formulas using Cetz. It is heavily inspired by the Chemfig package for LaTeX. This package is meant to be easy to use and customizable. It can also be used alongside the cetz package to draw more complex structures.
+  ],
+  examples-scope: (dictionary(alchemist)),
+)
+
+#let example =  example.with(side-by-side: true)
+
+#import alchemist : *
 
 // Some fancy logos
 // credits go to discord user @adriandelgado
@@ -27,14 +38,12 @@
 #show "LaTeX": LaTeX
 #show "@version": infos.package.version
 
-#show: mantys.with(
-  ..infos,
-  abstract: [
-    Alchemist is a package used to draw chemical structures with skeletal formulas using Cetz. It is heavily inspired by the Chemfig package for LaTeX. This package is meant to be easy to use and customizable. It can also be used alongside the cetz package to draw more complex structures.
-  ],
-  examples-scope: (dictionary(alchemist)),
-)
 
+
+#let info(body) = mty.alert(
+	color:rgb("#0074d9"),
+	body
+)
 
 #add-type("drawable", color: lime)
 
@@ -101,6 +110,35 @@ Th configuration dictionary that you can pass to skeletize defines a set of defa
   extract-headings: 3,
 )
 
+=== Link functions <links>
+==== Common arguments
+Links functions are used to draw links between molecules. They all have the same base arguments but can be customized with additional arguments.
+
+#argument("angle", types:(1), default: 0)[
+	Multiplier of the `angle-increment` argument of the drawing environment. The final angle is relative to the abscissa axis.
+]
+
+#argument("relative", types:(0deg), default: none)[
+	Relative angle to the previous link. This argument override all other angle arguments.
+]
+
+#argument("absolute", types:(0deg), default: none)[
+	Absolute angle of the link. This argument override `angle` argument.
+]
+
+#argument("antom-sep", types:(1em), default: default.atom-sep)[
+	Distance between the two connected atom of the link. Default to the `atom-sep` entry of the configuration dictionary.
+]
+
+#argument("from", types:(0))[
+	Index of the molecule in the group to start the link from. By default, it is computed depending on the angle of the link.
+]
+
+#argument("to", types:(0))[
+	Index of the molecule in the group to end the link to. By default, it is computed depending on the angle of the link.
+]
+
+==== Links
 #tidy-module(
   read("../src/links.typ"),
   name: infos.package.name,
@@ -110,8 +148,121 @@ Th configuration dictionary that you can pass to skeletize defines a set of defa
 )
 
 = Drawing molecules
+== Atoms
 
-== Basic drawing
+In alchemist, the name of the function #cmd("molecule") is used to create a group of atom but here it is a little bit abusive as it do not necessarily represent real molecules. An atom is in our case something of the form: optional number + capital letter + optional lowercase letter + optional \_ number. For the ones interested here is the regex used: `^ *([0-9]*[A-Z][a-z]*)(_[0-9]+)?`.
+
+#info[
+	For instance, $H_2O$ is a molecule of the atoms $H_2$ and $O$.
+	If we look at the bounding boxes of the molecules, we can see that separation.
+	#align(center, grid(
+		columns: 2,
+		column-gutter: 1em,
+		row-gutter: .65em,
+		$H_2O$, skeletize(debug:true, molecule("H_2O")),
+		$C H_4$, skeletize(debug:true, molecule("CH_4")),
+		$C_2 H_6$, skeletize(debug:true, molecule("C_2H_6")),
+	))
+]
+
+This separation does not have any impact on the drawing of the molecules but it will be useful when we will draw more complex structures.
+
+== Links
+There are already som links available with the package (see @links) and you can create your own links with the #cmd[build-link] function but they all share the same base arguments used to control their behaviors.
+
+=== Atom separation
+Each atom is separated by a distance defined by the `atom-sep` argument of the drawing environment. This distance can be overridden by the `atom-sep` argument of the link. It defines the distance between the center of the two connected atoms.
+
+The behavior is not well defined yet.
+
+=== Angle
+There are three ways to define the angle of a link: using the `angle` argument, the `relative` argument, or the `absolute` argument.
+
+The argument `angle` is a multiplier of the `angle-increment` argument.
+
+#example(```
+#skeletize({
+	single()
+	single(angle:1)
+	single(angle:3)
+	single()
+	single(angle:7)
+	single(angle:6)
+})
+```)
+
+Changing the `angle-increment` argument of the drawing environment will change the angle of the links.
+
+#example(```
+#skeletize(config:(angle-increment:20deg),{
+	single()
+	single(angle:1)
+	single(angle:3)
+	single()
+	single(angle:7)
+	single(angle:6)
+})
+```)
+
+The argument `relative` allows you to define the angle of the link relative to the previous link. 
+
+#example(```
+#skeletize({
+	single()
+	single(relative:20deg)
+	single(relative:20deg)
+	single(relative:20deg)
+	single(relative:20deg)
+})
+```)
+
+The argument `absolute` allows you to define the angle of the link relative to the abscissa axis.
+#example(```
+#skeletize({
+	single()
+	single(absolute:-20deg)
+	single(absolute:10deg)
+	single(absolute:40deg)
+	single(absolute:-90deg)
+})
+```)
+
+=== Starting and ending points
+By default, the starting and ending points of the links are computed depending on the angle of the link. You can override this behavior by using the `from` and `to` arguments.
+
+If the angle is in $]-90deg;90deg]$, the starting point is the last atom of the previous molecule and the ending point is the first atom of the next molecule. If the angle is in $]90deg;270deg]$, the starting point is the first atom of the previous molecule and the ending point is the last atom of the next molecule.
+
+#grid(columns: (1fr,1fr,1fr,1fr),
+align: center + horizon,
+row-gutter: 1em,
+..for i in range(0,8) {
+	(skeletize({
+		molecule("ABCD")
+		single(angle:i)
+		molecule("EFGH")
+	}),)
+})
+
+If you choose to override the starting and ending points, you can use the `from` and `to` arguments. The only constraint is that the index must be in the range $[0, n-1]$ where $n$ is the number of atoms in the molecule.
+
+#grid(columns: (1fr,1fr,1fr),
+align: center,
+row-gutter: 1em,
+..for i in range(0,3) {
+	(skeletize({
+		molecule("ABCD")
+		single(from:i, to: 3 - i, absolute: 70deg)
+		molecule("EFGH")
+	}),)
+})
+
+#info[
+	The fact that you can chose any index for the `from` and `to` arguments can lead to some weird results. Alchemist can't check if he result is beautiful or not.
+]
+
+== Branches
+Drawing linear molecules is nice but being able to draw molecule with branches is even better. To do so, you can use the #cmd[branch] function.
+
 
 
 == Integration with cetz <exemple-cez>

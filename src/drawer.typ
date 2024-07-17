@@ -265,7 +265,7 @@
   } else {
     panick("Unknown anchor type " + ctx.last-anchor.type)
   }
-  let length = link.at("length", default: ctx.config.atom-sep)
+  let length = link.at("antom-sep", default: ctx.config.atom-sep)
   let link-name = "link" + str(ctx.link-id)
   ctx = set-last-anchor(
     ctx,
