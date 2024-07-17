@@ -2,7 +2,7 @@
 #import "drawer.typ"
 #import "utils.typ"
 
-/// === Link functions
+
 /// Create a link function that is then used to draw a link between two points
 ///
 ///
