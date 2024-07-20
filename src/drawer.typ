@@ -13,7 +13,7 @@
   named-molecules: (:),
   relative-angle: 0deg,
   in-cycle: false,
-  first-cycle: false,
+  first-branch: false,
   cycle-step-angle: 0deg,
   angle: 0deg,
 )
@@ -330,7 +330,7 @@
         } else if element.at("type", default: none) == none {
           panic("Element " + str(element) + " has no type")
         } else if element.type == "molecule" {
-          if ctx.first-cycle {
+          if ctx.first-branch {
             panic("A molecule can not be the first element in a cycle")
           }
           (molecule-name, ctx, drawing) = draw-molecule(element, ctx)
@@ -339,16 +339,18 @@
             ctx = draw-molecule-links(element, molecule-name, ctx)
           }
         } else if element.type == "link" {
-          ctx.first-cycle = false
+          ctx.first-branch = false
           (ctx, drawing) = draw-link(element, ctx)
           drawing
         } else if element.type == "branch" {
+					let angle = angle-from-ctx(ctx, element.args, cycle-angle(ctx))
           let (drawing, branch-ctx) = draw-molecules-and-link(
             (
               ..ctx,
               in-cycle: false,
+							first-branch: true,
               cycle-step-angle: 0,
-              angle: cycle-angle(ctx),
+              angle: angle,
             ),
             element.draw,
           )
@@ -359,7 +361,7 @@
           drawing
         } else if element.type == "cycle" {
           let cycle-step-angle = 360deg / element.faces
-          let angle = angle-from-ctx(ctx, element, none)
+          let angle = angle-from-ctx(ctx, element.args, none)
           if angle == none {
             if ctx.in-cycle {
               angle = ctx.relative-angle + ctx.cycle-step-angle + 2 * cycle-step-angle
@@ -371,7 +373,7 @@
             (
               ..ctx,
               in-cycle: true,
-              first-cycle: true,
+              first-branch: true,
               cycle-step-angle: cycle-step-angle,
               relative-angle: angle,
               angle: angle,
