@@ -58,7 +58,11 @@
 
 /// === Branch and cycles
 /// Create a branch from the current molecule, the first element
-/// of the branch has to be a link
+/// of the branch has to be a link.
+/// 
+/// You can specify an angle argument like for links. This angle will be then
+/// used as the `base-angle` for the branch.
+///
 /// #example(```
 /// #skeletize({
 ///   molecule("A")
@@ -76,8 +80,11 @@
 ///   molecule("C")
 /// })
 ///```)
-#let branch(body) = {
-  ((type: "branch", draw: body),)
+#let branch(..args) = {
+	if args.pos().len() != 1 {
+		panic("Branch takes one positional argument: the body of the branch")
+	}
+  ((type: "branch", draw: args.pos().at(0), args: args.named()),)
 }
 
 /// Create a regular cycle of molecules
@@ -101,7 +108,7 @@
       type: "cycle",
       faces: args.pos().at(0),
       draw: args.pos().at(1),
-      ..args.named(),
+      args: args.named(),
     ),
   )
 }

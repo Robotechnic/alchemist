@@ -245,10 +245,10 @@ row-gutter: 1em,
 
 If you choose to override the starting and ending points, you can use the `from` and `to` arguments. The only constraint is that the index must be in the range $[0, n-1]$ where $n$ is the number of atoms in the molecule.
 
-#grid(columns: (1fr,1fr,1fr),
+#grid(columns: (1fr,1fr,1fr,1fr),
 align: center,
 row-gutter: 1em,
-..for i in range(0,3) {
+..for i in range(0,4) {
 	(skeletize({
 		molecule("ABCD")
 		single(from:i, to: 3 - i, absolute: 70deg)
@@ -263,6 +263,162 @@ row-gutter: 1em,
 == Branches
 Drawing linear molecules is nice but being able to draw molecule with branches is even better. To do so, you can use the #cmd[branch] function.
 
+The principle is simple. When you draw normal molecules, each time an element is added, the attachement point is moved accordingly to the added object. Drawing a branch is a way to tell alchemist that you want the attachement point to say the same for the others elements outside the branch. The only constraint is that the branch must start with a link.
+
+#example(```
+#skeletize({
+	molecule("A")
+	single()
+	molecule("B")
+	branch({
+		single(angle:1)
+		molecule("W")
+		single()
+		molecule("X")
+	})
+	single()
+	molecule("C")
+})
+```)
+
+It is of course possible to have nested branches or branches with the same starting point.
+
+#example(```
+#skeletize({
+	molecule("A")
+	branch({
+		single(angle:1)
+		molecule("B")
+		branch({
+			single(angle:1)
+			molecule("W")
+			single()
+			molecule("X")
+		})
+		single()
+		molecule("C")
+	})
+	branch({
+		single(angle:-2)
+		molecule("Y")
+		single(angle:-1)
+		molecule("Z")
+	})
+	single()
+	molecule("D")
+})
+```)
+
+You can also specify an angle argument like for links. This angle will be then used as the `base-angle` for the branch. It means that all the links with no angle defined will be drawn with this angle.
+
+#example(```
+#skeletize({
+	molecule("A")
+	single()
+	molecule("B")
+	branch(relative:60deg,{
+		single()
+		molecule("D")
+		single()
+		molecule("E")
+  })
+	branch(relative:-30deg,{
+		single()
+		molecule("F")
+		single()
+		molecule("G")
+	})
+	single()
+	molecule("C")
+})
+```)
+
+== Link distant atoms
+
+=== Basic usage
+From then, the only way to link atoms is to use links functions and putting them one after the other. This doesn't allow to do cycles or to link atoms that are not next to each other in the code. The way alchemist handle this is with the `links` and `name` arguments of the #cmd[molecule] function.
+
+#example(```
+	#skeletize({
+  molecule(name: "A", "A")
+  single()
+  molecule("B")
+  branch({
+    single(angle: 1)
+    molecule(
+      "W",
+      links: (
+        "A": single(),
+      ),
+    )
+    single()
+    molecule(name: "X", "X")
+  })
+  branch({
+    single(angle: -1)
+    molecule("Y")
+    single()
+    molecule(
+      name: "Z",
+      "Z",
+      links: (
+        "X": single(),
+      ),
+    )
+  })
+  single()
+  molecule(
+    "C",
+    links: (
+      "X": single(),
+      "Z": single(),
+    ),
+  )
+})
+```)
+
+In this example, we can see that the molecules are linked to the molecules defined before with the `name` argument. Note that you can't link to a molecule that is defined after the current one because the name is not defined yet. It's a limitation of the current implementation.
+
+=== Customizing links
+If you look at the previous example, you can see that the links used in the `links` argument are functions. This is because you can still customize the links as you want. The only thing that is not taken into account are the `length` and `angle` arguments. It means that you can change color, `from` and `to` arguments, etc.
+
+#example(```
+#skeletize({
+  molecule(name: "A", "A")
+  single()
+  molecule("B")
+  branch({
+    single(angle: 1)
+    molecule(
+      "W",
+      links: (
+        "A": double(stroke: red),
+      ),
+    )
+    single()
+    molecule(name: "X", "X")
+  })
+  branch({
+    single(angle: -1)
+    molecule("Y")
+    single()
+    molecule(
+      name: "Z",
+      "Z",
+      links: (
+        "X": single(stroke: black + 3pt),
+      ),
+    )
+  })
+  single()
+  molecule(
+    "C",
+    links: (
+      "X": cram-filled-left(fill: blue),
+      "Z": single(),
+    ),
+  )
+})```)
 
 
 == Integration with cetz <exemple-cez>
