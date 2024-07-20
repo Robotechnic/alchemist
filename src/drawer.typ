@@ -55,15 +55,13 @@
   if id >= count {
     panic("This molecule only has " + str(count) + " anchors")
   }
-  let to = if id == -1 {
-    count - 1
-  } else {
-    id
-  }
+	if id == -1 {
+		panic("The index of the molecule to link to must be defined")
+	}
   if name == none {
-    (name: str(to), anchor: "center")
+    (name: str(id), anchor: "center")
   } else {
-    (name: name, anchor: (str(to), "center"))
+    (name: name, anchor: (str(id), "center"))
   }
 }
 
@@ -177,13 +175,15 @@
   let (anchor, side, coord) = if ctx.last-anchor.type == "coord" {
     ("east", true, ctx.last-anchor.anchor)
   } else if ctx.last-anchor.type == "link" {
+		if ctx.last-anchor.to == -1 {
+			ctx.last-anchor.to = link-molecule-index(
+				ctx.last-anchor.angle,
+				true,
+				mol.count - 1,
+			)
+		}
     let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
     ctx.last-anchor.to-name = name
-    ctx.last-anchor.to = link-molecule-index(
-      ctx.last-anchor.angle,
-      true,
-      mol.count - 1,
-    )
     (anchor, false, ctx.last-anchor.name + ".end")
   } else {
     panic("A molecule must be linked to a coord or a link")
@@ -263,9 +263,9 @@
   } else if ctx.last-anchor.type == "link" {
     (name: ctx.last-anchor.name, anchor: "end")
   } else {
-    panick("Unknown anchor type " + ctx.last-anchor.type)
+    panic("Unknown anchor type " + ctx.last-anchor.type)
   }
-  let length = link.at("antom-sep", default: ctx.config.atom-sep)
+  let length = link.at("atom-sep", default: ctx.config.atom-sep)
   let link-name = "link" + str(ctx.link-id)
   ctx = set-last-anchor(
     ctx,
@@ -398,7 +398,7 @@
 #let molecule-anchor(cetz-ctx, angle, molecule, id) = {
   let (cetz-ctx, (x, y, _)) = cetz.coordinate.resolve(
     cetz-ctx,
-    (name: molecule, anchor: id),
+    (name: molecule, anchor: (id, "center")),
   )
   let (cetz-ctx, (_, b, _)) = cetz.coordinate.resolve(
     cetz-ctx,
@@ -422,16 +422,20 @@
     if link.to == none or link.from == none {
       let angle = utils.angle-between(cetz-ctx, link.from-pos, to-pos)
       link.angle = angle
-      link.from = link-molecule-index(
-        angle,
-        false,
-        ctx.named-molecules.at(link.from-name).count - 1,
-      )
-      link.to = link-molecule-index(
-        angle,
-        true,
-        ctx.named-molecules.at(link.to-name).count - 1,
-      )
+			if link.from == none {
+				link.from = link-molecule-index(
+					angle,
+					false,
+					ctx.named-molecules.at(link.from-name).count - 1,
+				)
+			}
+			if link.to == none {
+				link.to = link-molecule-index(
+					angle,
+					true,
+					ctx.named-molecules.at(link.to-name).count - 1,
+				)
+			}
     }
     (
       (
