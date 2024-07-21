@@ -541,7 +541,7 @@ Like branches, you can add cycles in cycles. By default the cycle will be placed
 #example(```
 	#skeletize({
 		molecule("A")
-		cycle(6,{
+		cycle(7,{
 			single()
 			molecule("B")
 			cycle(5,{
@@ -560,6 +560,7 @@ Like branches, you can add cycles in cycles. By default the cycle will be placed
 			})
 			single()
 			double()
+			single()
 		})
 	})
 ```)
