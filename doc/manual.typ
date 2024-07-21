@@ -10,9 +10,9 @@
   examples-scope: (dictionary(alchemist)),
 )
 
-#let example =  example.with(side-by-side: true)
+#let example = example.with(side-by-side: true)
 
-#import alchemist : *
+#import alchemist: *
 
 // Some fancy logos
 // credits go to discord user @adriandelgado
@@ -41,8 +41,8 @@
 
 
 #let info(body) = mty.alert(
-	color:rgb("#0074d9"),
-	body
+  color: rgb("#0074d9"),
+  body,
 )
 
 #add-type("drawable", color: lime)
@@ -67,37 +67,37 @@ To start drawing molecules, you first need to initialise the drawing environment
 
 The main argument is a block of code that contains the drawing instructions. The block can also contain any cetz code to draw more complex structures, see @exemple-cez.
 
-#command("skeletize", arg(debug: false), arg(background:none), arg(config:(:)), arg("body"))[
-	#argument("debug", types:(true))[
-		Display bounding boxes of the objects in the drawing environment.
-	]
-	#argument("background", types:(red, none))[
-		Background color of the drawing environment
-	]
-	#argument("config", types:((:)))[
-		Configuration of the drawing environment. See @config.
-	]
-	#argument("body", types:("drawable"))[
-		The module to draw or any cetz drawable object.
-	]
+#command("skeletize", arg(debug: false), arg(background: none), arg(config: (:)), arg("body"))[
+  #argument("debug", types: (true))[
+    Display bounding boxes of the objects in the drawing environment.
+  ]
+  #argument("background", types: (red, none))[
+    Background color of the drawing environment
+  ]
+  #argument("config", types: ((:)))[
+    Configuration of the drawing environment. See @config.
+  ]
+  #argument("body", types: ("drawable"))[
+    The module to draw or any cetz drawable object.
+  ]
 ]
 
 == Configuration <config>
 
 Th configuration dictionary that you can pass to skeletize defines a set of default values for a lot of parameters in alchemist.
 
-#import "../src/default.typ" : default
+#import "../src/default.typ": default
 
 #argument("atom-sep", default: default.atom-sep, types: default.atom-sep)[
-	It defines the distance between each atom center. It is overridden by the `atom-sep` argument of link
+  It defines the distance between each atom center. It is overridden by the `atom-sep` argument of link
 ]
 
 #argument("angle-increment", default: default.angle-increment, types: default.angle-increment)[
-	It defines the angle added by each increment of the `angle` argument of link
+  It defines the angle added by each increment of the `angle` argument of link
 ]
 
 #argument("base-angle", default: default.base-angle, types: default.base-angle)[
-	Default angle at which the link with no angle defined will be. 
+  Default angle at which the link with no angle defined will be.
 ]
 
 == Available commands
@@ -114,28 +114,28 @@ Th configuration dictionary that you can pass to skeletize defines a set of defa
 ==== Common arguments
 Links functions are used to draw links between molecules. They all have the same base arguments but can be customized with additional arguments.
 
-#argument("angle", types:(1), default: 0)[
-	Multiplier of the `angle-increment` argument of the drawing environment. The final angle is relative to the abscissa axis.
+#argument("angle", types: (1), default: 0)[
+  Multiplier of the `angle-increment` argument of the drawing environment. The final angle is relative to the abscissa axis.
 ]
 
-#argument("relative", types:(0deg), default: none)[
-	Relative angle to the previous link. This argument override all other angle arguments.
+#argument("relative", types: (0deg), default: none)[
+  Relative angle to the previous link. This argument override all other angle arguments.
 ]
 
-#argument("absolute", types:(0deg), default: none)[
-	Absolute angle of the link. This argument override `angle` argument.
+#argument("absolute", types: (0deg), default: none)[
+  Absolute angle of the link. This argument override `angle` argument.
 ]
 
-#argument("antom-sep", types:(1em), default: default.atom-sep)[
-	Distance between the two connected atom of the link. Default to the `atom-sep` entry of the configuration dictionary.
+#argument("antom-sep", types: (1em), default: default.atom-sep)[
+  Distance between the two connected atom of the link. Default to the `atom-sep` entry of the configuration dictionary.
 ]
 
-#argument("from", types:(0))[
-	Index of the molecule in the group to start the link from. By default, it is computed depending on the angle of the link.
+#argument("from", types: (0))[
+  Index of the molecule in the group to start the link from. By default, it is computed depending on the angle of the link.
 ]
 
-#argument("to", types:(0))[
-	Index of the molecule in the group to end the link to. By default, it is computed depending on the angle of the link.
+#argument("to", types: (0))[
+  Index of the molecule in the group to end the link to. By default, it is computed depending on the angle of the link.
 ]
 
 ==== Links
@@ -153,16 +153,19 @@ Links functions are used to draw links between molecules. They all have the same
 In alchemist, the name of the function #cmd("molecule") is used to create a group of atom but here it is a little bit abusive as it do not necessarily represent real molecules. An atom is in our case something of the form: optional number + capital letter + optional lowercase letter + optional \_ number. For the ones interested here is the regex used: `^ *([0-9]*[A-Z][a-z]*)(_[0-9]+)?`.
 
 #info[
-	For instance, $H_2O$ is a molecule of the atoms $H_2$ and $O$.
-	If we look at the bounding boxes of the molecules, we can see that separation.
-	#align(center, grid(
-		columns: 2,
-		column-gutter: 1em,
-		row-gutter: .65em,
-		$H_2O$, skeletize(debug:true, molecule("H_2O")),
-		$C H_4$, skeletize(debug:true, molecule("CH_4")),
-		$C_2 H_6$, skeletize(debug:true, molecule("C_2H_6")),
-	))
+  For instance, $H_2O$ is a molecule of the atoms $H_2$ and $O$.
+  If we look at the bounding boxes of the molecules, we can see that separation.
+  #align(
+    center,
+    grid(
+      columns: 2,
+      column-gutter: 1em,
+      row-gutter: .65em,
+      $H_2O$, skeletize(debug: true, molecule("H_2O")),
+      $C H_4$, skeletize(debug: true, molecule("CH_4")),
+      $C_2 H_6$, skeletize(debug: true, molecule("C_2H_6")),
+    ),
+  )
 ]
 
 This separation does not have any impact on the drawing of the molecules but it will be useful when we will draw more complex structures.
@@ -204,7 +207,7 @@ Changing the `angle-increment` argument of the drawing environment will change t
 })
 ```)
 
-The argument `relative` allows you to define the angle of the link relative to the previous link. 
+The argument `relative` allows you to define the angle of the link relative to the previous link.
 
 #example(```
 #skeletize({
@@ -232,32 +235,36 @@ By default, the starting and ending points of the links are computed depending o
 
 If the angle is in $]-90deg;90deg]$, the starting point is the last atom of the previous molecule and the ending point is the first atom of the next molecule. If the angle is in $]90deg;270deg]$, the starting point is the first atom of the previous molecule and the ending point is the last atom of the next molecule.
 
-#grid(columns: (1fr,1fr,1fr,1fr),
-align: center + horizon,
-row-gutter: 1em,
-..for i in range(0,8) {
-	(skeletize({
-		molecule("ABCD")
-		single(angle:i)
-		molecule("EFGH")
-	}),)
-})
+#grid(columns: (1fr, 1fr, 1fr, 1fr),
+  align: center + horizon,
+  row-gutter: 1em,
+  ..for i in range(0, 8) {
+    (
+      skeletize({
+        molecule("ABCD")
+        single(angle: i)
+        molecule("EFGH")
+      }),
+    )
+  })
 
 If you choose to override the starting and ending points, you can use the `from` and `to` arguments. The only constraint is that the index must be in the range $[0, n-1]$ where $n$ is the number of atoms in the molecule.
 
-#grid(columns: (1fr,1fr,1fr,1fr),
-align: center,
-row-gutter: 1em,
-..for i in range(0,4) {
-	(skeletize({
-		molecule("ABCD")
-		single(from:i, to: 3 - i, absolute: 70deg)
-		molecule("EFGH")
-	}),)
-})
+#grid(columns: (1fr, 1fr, 1fr, 1fr),
+  align: center,
+  row-gutter: 1em,
+  ..for i in range(0, 4) {
+    (
+      skeletize({
+        molecule("ABCD")
+        single(from: i, to: 3 - i, absolute: 70deg)
+        molecule("EFGH")
+      }),
+    )
+  })
 
 #info[
-	The fact that you can chose any index for the `from` and `to` arguments can lead to some weird results. Alchemist can't check if he result is beautiful or not.
+  The fact that you can chose any index for the `from` and `to` arguments can lead to some weird results. Alchemist can't check if he result is beautiful or not.
 ]
 
 == Branches
@@ -418,7 +425,183 @@ If you look at the previous example, you can see that the links used in the `lin
       "Z": single(),
     ),
   )
-})```)
+})
+```)
 
+== Cycles
+
+=== Basic usage
+
+Using branches and `links` arguments, you can draw cycles. However, depending on the number of faces, the angle calculation is fastidious. To help you with that, you can use the #cmd[cycle] function.
+
+The default behavior if the angle is $0deg$ is to be placed in a way that the last link is vertical.
+#example(```
+	#skeletize({
+		molecule("A")
+		cycle(5, {
+			single()
+			molecule("B")
+			double()
+			molecule("C")
+			single()
+			molecule("D")
+			single()
+			molecule("E")
+			double()
+		})
+	})
+```)
+
+If the angle is not $0deg$ or if the `align` argument is set, the cycle will be drawn in relation with the relative angle of the last link.
+
+#example(```
+	#skeletize({
+		single()
+		molecule("A")
+		cycle(5, align: true, {
+			single()
+			molecule("B")
+			double()
+			molecule("C")
+			single()
+			molecule("D")
+			single()
+			molecule("E")
+			double()
+		})
+	})
+```)
+
+A cycle must start by a link and if there is more links than the number of faces, the excess links will be ignored. Nevertheless, it is possible to have less links than the number of faces.
+
+#example(```
+	#skeletize({
+		cycle(4,{
+			single()
+			molecule("A")
+			single()
+			molecule("B")
+			single()
+			molecule("C")
+			single()
+			molecule("D")
+		})
+	})
+```)
+
+=== Branches in cycles
+
+It is possible to add branches in cycles. You can add a branch at any point of the cycle. The default angle of the branch will be set in a way that it is the bisector of the two links that are next to the branch.
+
+#example(```
+	#skeletize({
+		cycle(5,{
+			branch({
+				single()
+				molecule("A")
+				double()
+				molecule("B")
+				single()
+				molecule("C")
+			})
+			single()
+			branch({
+				single()
+				molecule("D")
+				single()
+				molecule("E")
+			})
+			single()
+			branch({
+				double()
+			})
+			single()
+			branch({
+				single()
+				molecule("F")
+			})
+			single()
+			branch({
+				single()
+				molecule("G")
+				double()
+			})
+			single()
+			single()
+			single()
+			single()
+		})
+	})
+```)
+
+=== Cycles imbrication
+
+Like branches, you can add cycles in cycles. By default the cycle will be placed in a way that the two cycles share a common link.
+
+#example(```
+	#skeletize({
+		molecule("A")
+		cycle(6,{
+			single()
+			molecule("B")
+			cycle(5,{
+				single()
+				single()
+				single()
+				single()
+			})
+			double()
+			single()
+			double()
+			cycle(4,{
+				single()
+				single()
+				single()
+			})
+			single()
+			double()
+		})
+	})
+```)
+
+=== Issues with atom groups
+
+Cycles by default have an issue with atom groups with multiples atoms. The links are not well placed for the cycle to be drawn correctly.
+
+#example(```
+	#skeletize({
+		molecule("AB")
+		cycle(5,{
+			single()
+			molecule("CDE")
+			single()
+			molecule("F")
+			single()
+			molecule("GH")
+			single()
+			molecule("I")
+			single()
+		})
+	})
+```)
+
+To fix that, you have to use the `from` and `to` arguments of the links to specify the starting and ending points of the links.
+
+#example(```
+	#skeletize({
+		molecule("AB")
+		cycle(5,{
+			single(from: 1, to: 0)
+			molecule("CDE")
+			single(from: 0)
+			molecule("F")
+			single(to: 0)
+			molecule("GH")
+			single(from: 0)
+			molecule("I")
+			single(to: 1)
+		})
+	})
+```)
 
 == Integration with cetz <exemple-cez>
