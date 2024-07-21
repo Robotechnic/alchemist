@@ -6,18 +6,24 @@
 #let default-anchor = (type: "coord", anchor: (0, 0))
 
 #let default-ctx = (
+	// general
   last-anchor: default-anchor,
-  links: (),
   group-id: 0,
   link-id: 0,
+	links: (),
   named-molecules: (:),
   relative-angle: 0deg,
+  angle: 0deg,
+
+	// branch and cycle
+	first-branch: false,
+
+	// cycle
+	first-molecule: none,
   in-cycle: false,
   cycle-faces: 0,
   faces-count: 0,
-  first-branch: false,
   cycle-step-angle: 0deg,
-  angle: 0deg,
 )
 
 #let set-last-anchor(ctx, anchor) = {
@@ -68,11 +74,11 @@
 }
 
 #let angle-from-ctx(ctx, object, default) = {
-  if object.at("relative", default: none) != none {
+  if "relative" in object {
     object.at("relative") + ctx.relative-angle
-  } else if object.at("absolute", default: none) != none {
+  } else if "absolute" in object {
     object.at("absolute")
-  } else if object.at("angle", default: none) != none {
+  } else if "angle" in object {
     object.at("angle") * ctx.config.angle-increment
   } else {
     default
@@ -81,11 +87,11 @@
 
 #let cycle-angle(ctx) = {
   if ctx.in-cycle {
-		if ctx.faces-count == 0 {
-		  ctx.relative-angle - ctx.cycle-step-angle - (180deg - ctx.cycle-step-angle) / 2
-		} else {
-    	ctx.relative-angle - (180deg - ctx.cycle-step-angle) / 2
-		}
+    if ctx.faces-count == 0 {
+      ctx.relative-angle - ctx.cycle-step-angle - (180deg - ctx.cycle-step-angle) / 2
+    } else {
+      ctx.relative-angle - (180deg - ctx.cycle-step-angle) / 2
+    }
   } else {
     ctx.angle
   }
@@ -171,7 +177,7 @@
 #let draw-molecule(mol, ctx) = {
   let name = mol.name
   if name != none {
-    if ctx.named-molecules.at(name, default: none) != none {
+    if name in ctx.named-molecules {
       panic("Molecule with name " + name + " already exists")
     }
     ctx.named-molecules.insert(name, mol)
@@ -231,15 +237,48 @@
   }
 }
 
+#let draw-last-cycle-link(link, ctx) = {
+  let from-name = none
+  let from-pos = none
+  if ctx.last-anchor.type == "molecule" {
+    from-name = ctx.last-anchor.name
+    from-pos = (name: from-name, anchor: "center")
+    if from-name not in ctx.named-molecules {
+      ctx.named-molecules.insert(from-name, ctx.last-anchor)
+    }
+  } else if ctx.last-anchor.type == "link" {
+    from-pos = (name: ctx.last-anchor.name, anchor: "end")
+  } else {
+    panic("A cycle link must be linked to a molecule or a link")
+  }
+  ctx.links.push((
+    type: "link",
+    name: link.at("name", default: "link" + str(ctx.link-id)),
+    from-pos: from-pos,
+    from-name: from-name,
+    to-name: ctx.first-molecule,
+    from: link.at("from", default: none),
+    to: link.at("to", default: none),
+    override: (offset: "left"),
+    draw: link.draw,
+  ))
+  ctx.link-id += 1
+  (ctx, ())
+}
+
 #let draw-link(link, ctx) = {
-  let link-angle = if ctx.in-cycle {
+  let link-angle = 0deg
+  if ctx.in-cycle {
+    if ctx.faces-count == ctx.cycle-faces - 1 and ctx.first-molecule != none {
+      return draw-last-cycle-link(link, ctx)
+    }
     if ctx.faces-count == 0 {
-      ctx.relative-angle
+      link-angle = ctx.relative-angle
     } else {
-      ctx.relative-angle + ctx.cycle-step-angle
+      link-angle = ctx.relative-angle + ctx.cycle-step-angle
     }
   } else {
-    angle-from-ctx(ctx, link, ctx.angle)
+    link-angle = angle-from-ctx(ctx, link, ctx.angle)
   }
   link-angle = utils.angle-correction(link-angle)
   ctx.relative-angle = link-angle
@@ -271,7 +310,7 @@
     panic("Unknown anchor type " + ctx.last-anchor.type)
   }
   let length = link.at("atom-sep", default: ctx.config.atom-sep)
-  let link-name = "link" + str(ctx.link-id)
+  let link-name = link.at("name", default: "link" + str(ctx.link-id))
   ctx = set-last-anchor(
     ctx,
     (
@@ -303,21 +342,21 @@
 #let draw-molecule-links(mol, mol-name, ctx) = {
   ctx.named-molecules.insert(mol-name, mol)
   let last-anchor = ctx.last-anchor
-  for (to-name, link) in mol.links {
+  for (to-name, (link,)) in mol.links {
     ctx.last-anchor = last-anchor
-    if ctx.named-molecules.at(to-name, default: none) == none {
+    if to-name not in ctx.named-molecules {
       panic("Molecule " + to-name + " does not exist")
     }
     ctx.links.push((
       type: "link",
-      name: "link" + str(ctx.link-id),
+      name: link.at("name", default: "link" + str(ctx.link-id)),
       from-pos: (name: mol-name, anchor: "center"),
       from-name: mol-name,
       to-name: to-name,
       override: angle-override(ctx.angle, ctx),
       from: none,
       to: none,
-      draw: link.at(0).draw,
+      draw: link.draw,
     ))
     ctx.link-id += 1
   }
@@ -335,7 +374,7 @@
         }
         if type(element) == function {
           (element,)
-        } else if element.at("type", default: none) == none {
+        } else if "type" not in element {
           panic("Element " + str(element) + " has no type")
         } else if element.type == "molecule" {
           if ctx.first-branch {
@@ -374,9 +413,9 @@
           if angle == none {
             if ctx.in-cycle {
               angle = ctx.relative-angle - (180deg - cycle-step-angle)
-							if ctx.faces-count != 0 {
-								angle += ctx.cycle-step-angle
-							}
+              if ctx.faces-count != 0 {
+                angle += ctx.cycle-step-angle
+              }
             } else if ctx.relative-angle == 0deg and ctx.angle == 0deg and not element.args.at(
               "align",
               default: false,
@@ -384,6 +423,13 @@
               angle = cycle-step-angle - 90deg
             } else {
               angle = ctx.relative-angle - (180deg - cycle-step-angle) / 2
+            }
+          }
+          let first-molecule = none
+          if ctx.last-anchor.type == "molecule" {
+            first-molecule = ctx.last-anchor.name
+            if first-molecule not in ctx.named-molecules {
+              ctx.named-molecules.insert(first-molecule, ctx.last-anchor)
             }
           }
           let (drawing, cycle-ctx) = draw-molecules-and-link(
@@ -395,6 +441,7 @@
               first-branch: true,
               cycle-step-angle: cycle-step-angle,
               relative-angle: angle,
+              first-molecule: first-molecule,
               angle: angle,
             ),
             element.draw,
@@ -458,44 +505,43 @@
         )
       }
     }
-    (
-      (
-        molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)),
-        molecule-anchor(
-          cetz-ctx,
-          link.angle + 180deg,
-          link.to-name,
-          str(link.to),
-        ),
-      ),
-      link.angle,
-    )
+    let start = molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from))
+    let end = molecule-anchor(cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
+    ((start, end), utils.angle-between(cetz-ctx, start, end))
   } else if link.to-name != none {
     let to-pos = (name: link.to-name, anchor: "center")
+		let end-anchor = none
     if link.to == none {
       let angle = utils.angle-correction(utils.angle-between(
         cetz-ctx,
         link.from-pos,
         to-pos,
-      ) + 180deg)
-      link.angle = angle
-      link.to = link-molecule-index(
+      ))
+			link.to = link-molecule-index(
         angle,
         true,
         ctx.named-molecules.at(link.to-name).count - 1,
       )
-    }
+      link.angle = angle
+    } else if "angle" not in link {
+			link.angle = utils.angle-correction(utils.angle-between(
+				cetz-ctx,
+				link.from-pos,
+				(name: link.to-name, anchor: (str(link.to), "center")),
+			))
+		}
+    let end-anchor = molecule-anchor(
+      cetz-ctx,
+      link.angle + 180deg,
+      link.to-name,
+      str(link.to),
+    )
     (
       (
         link.from-pos,
-        molecule-anchor(
-          cetz-ctx,
-          link.angle + 180deg,
-          link.to-name,
-          str(link.to),
-        ),
+        end-anchor,
       ),
-      link.angle,
+      utils.angle-between(cetz-ctx, link.from-pos, end-anchor),
     )
   } else if link.from-name != none {
     (
@@ -547,7 +593,7 @@
 /// setup a molecule skeleton drawer
 #let skeletize(debug: false, background: none, config: (:), body) = {
   for (key, value) in default {
-    if config.at(key, default: none) == none {
+    if key not in config {
       config.insert(key, value)
     }
   }
