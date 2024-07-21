@@ -88,6 +88,12 @@
 }
 
 /// Create a regular cycle of molecules
+/// You can specify an angle argument like for links. This angle will be then
+/// the angle of the first link of the cycle.
+///
+/// The argument `align` can be used to force align the cycle according to the
+/// relative angle of the previous link.
+///
 /// #example(```
 /// #skeletize({
 ///   cycle(5, {

@@ -13,6 +13,8 @@
   named-molecules: (:),
   relative-angle: 0deg,
   in-cycle: false,
+  cycle-faces: 0,
+  faces-count: 0,
   first-branch: false,
   cycle-step-angle: 0deg,
   angle: 0deg,
@@ -55,9 +57,9 @@
   if id >= count {
     panic("This molecule only has " + str(count) + " anchors")
   }
-	if id == -1 {
-		panic("The index of the molecule to link to must be defined")
-	}
+  if id == -1 {
+    panic("The index of the molecule to link to must be defined")
+  }
   if name == none {
     (name: str(id), anchor: "center")
   } else {
@@ -79,7 +81,11 @@
 
 #let cycle-angle(ctx) = {
   if ctx.in-cycle {
-    ctx.relative-angle - (180deg - ctx.cycle-step-angle) / 2
+		if ctx.faces-count == 0 {
+		  ctx.relative-angle - ctx.cycle-step-angle - (180deg - ctx.cycle-step-angle) / 2
+		} else {
+    	ctx.relative-angle - (180deg - ctx.cycle-step-angle) / 2
+		}
   } else {
     ctx.angle
   }
@@ -122,7 +128,7 @@
       (to-x, to-y + 0.05),
     )
   })
-	let stroke = args.at("stroke", default: black + .05em)
+  let stroke = args.at("stroke", default: black + .05em)
   let dash-gap = utils.convert-length(ctx, args.at("dash-gap", default: .3em))
   let dash-width = stroke.thickness
   let converted-dash-width = utils.convert-length(ctx, dash-width)
@@ -175,13 +181,13 @@
   let (anchor, side, coord) = if ctx.last-anchor.type == "coord" {
     ("east", true, ctx.last-anchor.anchor)
   } else if ctx.last-anchor.type == "link" {
-		if ctx.last-anchor.to == -1 {
-			ctx.last-anchor.to = link-molecule-index(
-				ctx.last-anchor.angle,
-				true,
-				mol.count - 1,
-			)
-		}
+    if ctx.last-anchor.to == -1 {
+      ctx.last-anchor.to = link-molecule-index(
+        ctx.last-anchor.angle,
+        true,
+        mol.count - 1,
+      )
+    }
     let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
     ctx.last-anchor.to-name = name
     (anchor, false, ctx.last-anchor.name + ".end")
@@ -219,11 +225,7 @@
 
 #let angle-override(angle, ctx) = {
   if ctx.in-cycle {
-    if angle > 0deg {
-      ("offset": "right")
-    } else {
-      ("offset": "left")
-    }
+    ("offset": "left")
   } else {
     (:)
   }
@@ -231,8 +233,11 @@
 
 #let draw-link(link, ctx) = {
   let link-angle = if ctx.in-cycle {
-    let link-angle = ctx.cycle-step-angle + ctx.relative-angle
-    link-angle
+    if ctx.faces-count == 0 {
+      ctx.relative-angle
+    } else {
+      ctx.relative-angle + ctx.cycle-step-angle
+    }
   } else {
     angle-from-ctx(ctx, link, ctx.angle)
   }
@@ -325,6 +330,9 @@
   (
     {
       for element in body {
+        if ctx.in-cycle and ctx.faces-count >= ctx.cycle-faces {
+          continue
+        }
         if type(element) == function {
           (element,)
         } else if element.at("type", default: none) == none {
@@ -341,14 +349,15 @@
         } else if element.type == "link" {
           ctx.first-branch = false
           (ctx, drawing) = draw-link(element, ctx)
+          ctx.faces-count += 1
           drawing
         } else if element.type == "branch" {
-					let angle = angle-from-ctx(ctx, element.args, cycle-angle(ctx))
+          let angle = angle-from-ctx(ctx, element.args, cycle-angle(ctx))
           let (drawing, branch-ctx) = draw-molecules-and-link(
             (
               ..ctx,
               in-cycle: false,
-							first-branch: true,
+              first-branch: true,
               cycle-step-angle: 0,
               angle: angle,
             ),
@@ -364,15 +373,25 @@
           let angle = angle-from-ctx(ctx, element.args, none)
           if angle == none {
             if ctx.in-cycle {
-              angle = ctx.relative-angle + ctx.cycle-step-angle + 2 * cycle-step-angle
+              angle = ctx.relative-angle - (180deg - cycle-step-angle)
+							if ctx.faces-count != 0 {
+								angle += ctx.cycle-step-angle
+							}
+            } else if ctx.relative-angle == 0deg and ctx.angle == 0deg and not element.args.at(
+              "align",
+              default: false,
+            ) {
+              angle = cycle-step-angle - 90deg
             } else {
-              angle = cycle-angle(ctx) - cycle-step-angle * 1.5
+              angle = ctx.relative-angle - (180deg - cycle-step-angle) / 2
             }
           }
           let (drawing, cycle-ctx) = draw-molecules-and-link(
             (
               ..ctx,
               in-cycle: true,
+              cycle-faces: element.faces,
+              faces-count: 0,
               first-branch: true,
               cycle-step-angle: cycle-step-angle,
               relative-angle: angle,
@@ -424,20 +443,20 @@
     if link.to == none or link.from == none {
       let angle = utils.angle-between(cetz-ctx, link.from-pos, to-pos)
       link.angle = angle
-			if link.from == none {
-				link.from = link-molecule-index(
-					angle,
-					false,
-					ctx.named-molecules.at(link.from-name).count - 1,
-				)
-			}
-			if link.to == none {
-				link.to = link-molecule-index(
-					angle,
-					true,
-					ctx.named-molecules.at(link.to-name).count - 1,
-				)
-			}
+      if link.from == none {
+        link.from = link-molecule-index(
+          angle,
+          false,
+          ctx.named-molecules.at(link.from-name).count - 1,
+        )
+      }
+      if link.to == none {
+        link.to = link-molecule-index(
+          angle,
+          true,
+          ctx.named-molecules.at(link.to-name).count - 1,
+        )
+      }
     }
     (
       (
@@ -503,7 +522,7 @@
           {
             set-origin(from)
             rotate(angle)
-						anchor("end", (length, 0))
+            anchor("end", (length, 0))
             (link.draw)(length, cetz-ctx, override: link.override)
           },
         )

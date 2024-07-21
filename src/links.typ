@@ -72,6 +72,19 @@
 ///   molecule("B")
 /// })
 ///```)
+/// This link also supports an `offset` argument that can be set to `left`, `right` or `center`. 
+///It allows to make either the let side, right side or the center of the double line to be aligned with the link point.
+/// #example(```
+/// #skeletize({
+///   molecule("A")
+///   double(offset: "right")
+///   molecule("B")
+///   double(offset: "left")
+///   molecule("C")
+///   double(offset: "center")
+///   molecule("D")
+/// })
+///```)
 #let double = build-link((length, ctx, args) => {
   import cetz.draw: *
   let gap = utils.convert-length(ctx, args.at("gap", default: .25em)) / 2
@@ -80,9 +93,9 @@
   if coeff < 0 or coeff > 1 {
     panic("Invalid offset-coeff value: must be between 0 and 1")
   }
-  if offset == "left" {
+  if offset == "right" {
     translate((0, -gap))
-  } else if offset == "right" {
+  } else if offset == "left" {
     translate((0, gap))
   } else if offset == "center" { } else {
     panic("Invalid offset value: must be \"left\", \"right\" or \"center\"")
@@ -90,7 +103,7 @@
 
   translate((0, -gap))
   line(
-    ..if offset == "left" {
+    ..if offset == "right" {
       let x = length * (1 - coeff) / 2
       ((x, 0), (x + length * coeff, 0))
     } else {
@@ -100,7 +113,7 @@
   )
   translate((0, 2 * gap))
   line(
-    ..if offset == "right" {
+    ..if offset == "left" {
       let x = length * (1 - coeff) / 2
       ((x, 0), (x + length * coeff, 0))
     } else {
