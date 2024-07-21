@@ -476,8 +476,8 @@
     cetz-ctx,
     (name: molecule, anchor: (id, "east")),
   )
-  let a = (a - x) * 1.5
-  let b = (b - y) * 2.2
+  let a = (a - x) * 1.8
+  let b = (b - y) * 2.3
   if a == 0 or b == 0 {
     panic("Ellipse " + ellipse + " has no width or height")
   }
