@@ -195,8 +195,8 @@
       )
     }
     let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
-    ctx.last-anchor.to-name = name
-    (anchor, false, ctx.last-anchor.name + ".end")
+		ctx.last-anchor.to-name = name
+    (anchor, false, ctx.last-anchor.name + "-end-anchor")
   } else {
     panic("A molecule must be linked to a coord or a link")
   }
@@ -247,7 +247,7 @@
       ctx.named-molecules.insert(from-name, ctx.last-anchor)
     }
   } else if ctx.last-anchor.type == "link" {
-    from-pos = (name: ctx.last-anchor.name, anchor: "end")
+    from-pos = ctx.last-anchor.name + "-end-anchor"
   } else {
     panic("A cycle link must be linked to a molecule or a link")
   }
@@ -305,7 +305,7 @@
       ctx.last-anchor.count,
     )
   } else if ctx.last-anchor.type == "link" {
-    (name: ctx.last-anchor.name, anchor: "end")
+    ctx.last-anchor.name + "-end-anchor"
   } else {
     panic("Unknown anchor type " + ctx.last-anchor.type)
   }
@@ -334,7 +334,9 @@
       let length = utils.convert-length(ctx, length)
       let x = x1 + length * calc.cos(link-angle)
       let y = y1 + length * calc.sin(link-angle)
-      draw.hide(draw.line(name: link-name, (x1, y1), (x, y)))
+			draw.group(name: link-name + "-end-anchor",{
+				draw.anchor("default", (x, y))
+			})
     }),
   )
 }
@@ -509,13 +511,11 @@
     let end = molecule-anchor(cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
     ((start, end), utils.angle-between(cetz-ctx, start, end))
   } else if link.to-name != none {
-    let to-pos = (name: link.to-name, anchor: "center")
-		let end-anchor = none
     if link.to == none {
       let angle = utils.angle-correction(utils.angle-between(
         cetz-ctx,
         link.from-pos,
-        to-pos,
+        (name: link.to-name, anchor: "center"),
       ))
 			link.to = link-molecule-index(
         angle,
@@ -547,12 +547,12 @@
     (
       (
         molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)),
-        (name: link.name, anchor: "end"),
+        link.name + "-end-anchor"
       ),
       link.angle,
     )
   } else {
-    ((link.from-pos, (name: link.name, anchor: "end")), link.angle)
+    ((link.from-pos, link.name + "-end-anchor"), link.angle)
   }
 }
 
@@ -562,13 +562,18 @@
     get-ctx(cetz-ctx => {
       for link in ctx.links {
         let ((from, to), angle) = calculate-link-anchors(ctx, cetz-ctx, link)
+				if ctx.config.debug {
+					circle(from,radius: .1em, fill: red, stroke: red)
+					circle(to,radius: .1em, fill: red, stroke: red)
+				}
         let length = utils.distance-between(cetz-ctx, from, to)
         group(
           name: link.name,
           {
             set-origin(from)
             rotate(angle)
-            anchor("end", (length, 0))
+						hide(line((0, 0), (length, 0), name: link.name + "-anchors"))
+						copy-anchors(link.name + "-anchors")
             (link.draw)(length, cetz-ctx, override: link.override)
           },
         )
@@ -597,6 +602,7 @@
       config.insert(key, value)
     }
   }
+	config.debug = debug
   cetz.canvas(
     debug: debug,
     background: background,
