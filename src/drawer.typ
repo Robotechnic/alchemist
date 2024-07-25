@@ -390,7 +390,6 @@
 				}
 			} else {
 				let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
-
 				let (ox, oy, _) = vertex.at(opposite)
 				let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
 				if radius < min-radius {

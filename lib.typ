@@ -109,10 +109,14 @@
   if args.pos().len() != 2 {
     panic("Cycle takes two positional arguments: number of faces and body")
   }
+	let faces = args.pos().at(0)
+	if faces < 3 {
+		panic("A cycle must have at least 3 faces")
+	}
   (
     (
       type: "cycle",
-      faces: args.pos().at(0),
+      faces: faces,
       draw: args.pos().at(1),
       args: args.named(),
     ),
