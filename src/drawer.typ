@@ -24,6 +24,8 @@
   cycle-faces: 0,
   faces-count: 0,
   cycle-step-angle: 0deg,
+	record-edges: false,
+	vertex-anchors: (),
 )
 
 #let set-last-anchor(ctx, anchor) = {
@@ -195,7 +197,7 @@
       )
     }
     let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
-		ctx.last-anchor.to-name = name
+    ctx.last-anchor.to-name = name
     (anchor, false, ctx.last-anchor.name + "-end-anchor")
   } else {
     panic("A molecule must be linked to a coord or a link")
@@ -311,6 +313,12 @@
   }
   let length = link.at("atom-sep", default: ctx.config.atom-sep)
   let link-name = link.at("name", default: "link" + str(ctx.link-id))
+  if ctx.record-edges {
+		if ctx.faces-count == 0 {
+			ctx.vertex-anchors.push(from-pos)
+		}
+    ctx.vertex-anchors.push(link-name + "-end-anchor")
+  }
   ctx = set-last-anchor(
     ctx,
     (
@@ -334,11 +342,96 @@
       let length = utils.convert-length(ctx, length)
       let x = x1 + length * calc.cos(link-angle)
       let y = y1 + length * calc.sin(link-angle)
-			draw.group(name: link-name + "-end-anchor",{
-				draw.anchor("default", (x, y))
-			})
+      draw.group(
+        name: link-name + "-end-anchor",
+        {
+          draw.anchor("default", (x, y))
+        },
+      )
     }),
   )
+}
+
+#let draw-cycle-center-arc(ctx, name, arc) = {
+	let faces = ctx.cycle-faces
+	let vertex = ctx.vertex-anchors
+	draw.get-ctx(cetz-ctx => {
+		let odd = calc.rem(faces,  2) == 1
+		let (cetz-ctx, ..vertex) = cetz.coordinate.resolve(cetz-ctx, ..vertex)
+		if vertex.len() < faces {
+			let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
+			for i in range(faces - vertex.len()) {
+				let (x, y, _) = vertex.last()
+				vertex.push(
+					(
+						x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+						y + atom-sep * calc.sin(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+						0
+					)
+				)	
+			}
+		}
+		let center = (0, 0)
+		let min-radius = 9223372036854775807 // max int
+		for (i,v) in vertex.enumerate() {
+			if (ctx.config.debug) {
+				draw.circle(v, radius: .1em, fill: blue, stroke: blue)
+			}
+			let (x, y, _) = v
+			center = (center.at(0) + x, center.at(1) + y)
+			if odd {
+				let opposite1 = calc.rem(i + calc.div-euclid(faces, 2), faces)
+				let opposite2 = calc.rem(i + calc.div-euclid(faces, 2) + 1, faces)
+				let (ox1, oy1, _) = vertex.at(opposite1)
+				let (ox2, oy2, _) = vertex.at(opposite2)
+				let radius = utils.distance-between(cetz-ctx, (x, y), ((ox1 + ox2) / 2, (oy1 + oy2) / 2)) / 2
+				if radius < min-radius {
+					min-radius = radius
+				}
+			} else {
+				let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
+
+				let (ox, oy, _) = vertex.at(opposite)
+				let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
+				if radius < min-radius {
+					min-radius = radius
+				}
+			}
+		}
+		center = (center.at(0) / vertex.len(), center.at(1) / vertex.len())
+		if name != none {
+			draw.group(
+				name: name,
+				{
+					draw.anchor("default", center)
+				})
+		}
+		if arc != none {
+			if min-radius == 9223372036854775807 {
+				panic("The cycle has no opposite vertices")
+			}
+			if ctx.cycle-faces > 4 {
+				min-radius *= arc.at("radius", default: 0.7)
+			} else {
+				min-radius *= arc.at("radius", default: 0.5)
+			}
+			let start = arc.at("start", default: 0deg)
+			let end = arc.at("end", default: 360deg)
+			let delta = arc.at("delta", default: end - start)
+			center = (
+				center.at(0) + min-radius * calc.cos(start),
+				center.at(1) + min-radius * calc.sin(start)
+			)
+			draw.arc(
+				center,
+				..arc,
+				radius: min-radius,
+				start: start,
+				delta: delta,
+			)
+		}
+	})
+
 }
 
 #let draw-molecule-links(mol, mol-name, ctx) = {
@@ -368,7 +461,7 @@
 #let draw-molecules-and-link(ctx, body) = {
   let molecule-name = ""
   let drawing = ()
-	let cetz-drawing = ()
+  let cetz-drawing = ()
   (
     {
       for element in body {
@@ -376,7 +469,7 @@
           continue
         }
         if type(element) == function {
-					cetz-drawing.push(element)
+          cetz-drawing.push(element)
         } else if "type" not in element {
           panic("Element " + str(element) + " has no type")
         } else if element.type == "molecule" {
@@ -409,7 +502,7 @@
           ctx.links += branch-ctx.links
           ctx.group-id = branch-ctx.group-id
           ctx.link-id = branch-ctx.link-id
-					cetz-drawing += cetz-rec
+          cetz-drawing += cetz-rec
           drawing
         } else if element.type == "cycle" {
           let cycle-step-angle = 360deg / element.faces
@@ -436,6 +529,14 @@
               ctx.named-molecules.insert(first-molecule, ctx.last-anchor)
             }
           }
+          let name = none
+          let record-edges = false
+          if "name" in element.args {
+            name = element.args.at("name")
+            record-edges = true
+          } else if "arc" in element.args {
+						record-edges = true
+					}
           let (drawing, cycle-ctx, cetz-rec) = draw-molecules-and-link(
             (
               ..ctx,
@@ -447,6 +548,7 @@
               relative-angle: angle,
               first-molecule: first-molecule,
               angle: angle,
+              record-edges: record-edges,
             ),
             element.draw,
           )
@@ -454,8 +556,11 @@
           ctx.links += cycle-ctx.links
           ctx.group-id = cycle-ctx.group-id
           ctx.link-id = cycle-ctx.link-id
-					cetz-drawing += cetz-rec
+          cetz-drawing += cetz-rec
           drawing
+					if record-edges {
+						draw-cycle-center-arc(cycle-ctx, name, element.args.at("arc", default: none))
+					}
         } else {
           panic("Unknown element type " + element.type)
         }
@@ -465,7 +570,7 @@
       }
     },
     ctx,
-		cetz-drawing,
+    cetz-drawing,
   )
 }
 
@@ -516,24 +621,28 @@
     ((start, end), utils.angle-between(cetz-ctx, start, end))
   } else if link.to-name != none {
     if link.to == none {
-      let angle = utils.angle-correction(utils.angle-between(
-        cetz-ctx,
-        link.from-pos,
-        (name: link.to-name, anchor: "center"),
-      ))
-			link.to = link-molecule-index(
+      let angle = utils.angle-correction(
+        utils.angle-between(
+          cetz-ctx,
+          link.from-pos,
+          (name: link.to-name, anchor: "center"),
+        ),
+      )
+      link.to = link-molecule-index(
         angle,
         true,
         ctx.named-molecules.at(link.to-name).count - 1,
       )
       link.angle = angle
     } else if "angle" not in link {
-			link.angle = utils.angle-correction(utils.angle-between(
-				cetz-ctx,
-				link.from-pos,
-				(name: link.to-name, anchor: (str(link.to), "center")),
-			))
-		}
+      link.angle = utils.angle-correction(
+        utils.angle-between(
+          cetz-ctx,
+          link.from-pos,
+          (name: link.to-name, anchor: (str(link.to), "center")),
+        ),
+      )
+    }
     let end-anchor = molecule-anchor(
       cetz-ctx,
       link.angle + 180deg,
@@ -551,7 +660,7 @@
     (
       (
         molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)),
-        link.name + "-end-anchor"
+        link.name + "-end-anchor",
       ),
       link.angle,
     )
@@ -566,19 +675,17 @@
     get-ctx(cetz-ctx => {
       for link in ctx.links {
         let ((from, to), angle) = calculate-link-anchors(ctx, cetz-ctx, link)
-				if ctx.config.debug {
-					circle(from,radius: .1em, fill: red, stroke: red)
-					circle(to,radius: .1em, fill: red, stroke: red)
-				}
+        if ctx.config.debug {
+          circle(from, radius: .1em, fill: red, stroke: red)
+          circle(to, radius: .1em, fill: red, stroke: red)
+        }
         let length = utils.distance-between(cetz-ctx, from, to)
-				hide(line(from, to, name: link.name))
-        group(
-          {
-            set-origin(from)
-            rotate(angle)
-            (link.draw)(length, cetz-ctx, override: link.override)
-          },
-        )
+        hide(line(from, to, name: link.name))
+        group({
+          set-origin(from)
+          rotate(angle)
+          (link.draw)(length, cetz-ctx, override: link.override)
+        })
       }
     }),
     ctx,
@@ -594,7 +701,7 @@
   {
     draw
     links
-		cetz-drawing
+    cetz-drawing
   }
 }
 
@@ -605,7 +712,9 @@
       config.insert(key, value)
     }
   }
-	config.debug = debug
+	if "debug" not in config {
+		config.insert("debug", debug)
+	}
   cetz.canvas(
     debug: debug,
     background: background,
