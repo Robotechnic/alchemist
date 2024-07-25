@@ -1,5 +1,6 @@
 #import "@preview/mantys:0.1.4": *
 #import "@preview/alchemist:0.1.0"
+#import "@preview/cetz:0.2.2"
 
 #let infos = toml("../typst.toml")
 #show: mantys.with(
@@ -605,4 +606,149 @@ To fix that, you have to use the `from` and `to` arguments of the links to speci
 	})
 ```)
 
+== Custom links
+
+Using the #cmd[build-link] function, you can create your own links. The function passed as argument to #cmd[build-link] must takes three arguments:
+- The length of the link
+- The cetz context of the drawing environment
+- A dictionary of named arguments that can be used to configure the links
+You can then draw anything you want using the cetz functions. For instance, here is the code for the `single` link:
+```typ
+#let single = build-link((length, _, args) => {
+  import cetz.draw: *
+  line((0, 0), (length, 0), stroke: args.at("stroke", default: black))
+})
+```
+
 == Integration with cetz <exemple-cez>
+
+=== Molecules
+
+If you name your molecules with the `name` argument, you can use them in cetz code. The name of the molecule is the name of the cetz object. Accessing to atoms is done by using the anchors numbered by the index of the atom in the molecule.
+
+#example(
+  side-by-side: false,
+  ```
+  #skeletize({
+    import cetz.draw: *
+    molecule("ABCD", name: "A")
+    single()
+    molecule("EFGH", name: "B")
+    line(
+      "A.0.south",
+      (rel: (0, -0.5)),
+      (to: "B.0.south", rel: (0, -0.5)),
+      "B.0.south",
+      stroke: red,
+      mark: (end: ">"),
+    )
+    for i in range(0, 4) {
+      content((-2 + i, 2), $#i$, name: "label-" + str(i))
+      line(
+        (name: "label-" + str(i), anchor: "south"),
+        (name: "A", anchor: (str(i), "north")),
+        mark: (end: "<>"),
+      )
+    }
+  })
+  ```,
+)
+
+=== Links
+
+If you name your links with the `name` argument, you can use them in cetz code. The name of the link is the name of the cetz object. It exposes the same anchors as the `line` function of cetz.
+
+#example(
+  side-by-side: false,
+  ```
+  #skeletize({
+    import cetz.draw: *
+    double(absolute: 30deg, name: "l1")
+    single(absolute: -30deg, name: "l2")
+    molecule("X", name: "X")
+    hobby(
+      "l1.50%",
+      ("l1.start", 0.5, 90deg, "l1.end"),
+      "l1.start",
+  		stroke: (paint: red, dash: "dashed"),
+      mark: (end: ">"),
+    )
+  	hobby(
+  		(to: "X.north", rel: (0, 1pt)),
+  		("l2.end", 0.4, -90deg, "l2.start"),
+  		"l2.50%",
+  		mark: (end: ">"),
+  	)
+  })
+  ```,
+)
+
+Here, all the used coordinates for the arrows are computed using relative coordinates. It means that if you change the position of the links, the arrows will be placed accordingly without any modification.
+
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  align: horizon + center,
+  skeletize({
+    import cetz.draw: *
+    double(absolute: 45deg, name: "l1")
+    single(absolute: -80deg, name: "l2")
+    molecule("X", name: "X")
+    hobby(
+      "l1.50%",
+      ("l1.start", 0.5, 90deg, "l1.end"),
+      "l1.start",
+      stroke: (paint: red, dash: "dashed"),
+      mark: (end: ">"),
+    )
+    hobby(
+      (to: "X.north", rel: (0, 1pt)),
+      ("l2.end", 0.4, -90deg, "l2.start"),
+      "l2.50%",
+      mark: (end: ">"),
+    )
+  }),
+  skeletize({
+    import cetz.draw: *
+    double(absolute: 30deg, name: "l1")
+    single(absolute: 30deg, name: "l2")
+    molecule("X", name: "X")
+    hobby(
+      "l1.50%",
+      ("l1.start", 0.5, 90deg, "l1.end"),
+      "l1.start",
+      stroke: (paint: red, dash: "dashed"),
+      mark: (end: ">"),
+    )
+    hobby(
+      (to: "X.north", rel: (0, 1pt)),
+      ("l2.end", 0.4, -90deg, "l2.start"),
+      "l2.50%",
+      mark: (end: ">"),
+    )
+  }),
+  skeletize({
+    import cetz.draw: *
+    double(absolute: 90deg, name: "l1")
+    single(absolute: 0deg, name: "l2")
+    molecule("X", name: "X")
+    hobby(
+      "l1.50%",
+      ("l1.start", 0.5, 90deg, "l1.end"),
+      "l1.start",
+      stroke: (paint: red, dash: "dashed"),
+      mark: (end: ">"),
+    )
+    hobby(
+      (to: "X.north", rel: (0, 1pt)),
+      ("l2.end", 0.4, -90deg, "l2.start"),
+      "l2.50%",
+      mark: (end: ">"),
+    )
+  }),
+)
+
+=== Cycles centers
+
+The cycles centers can be accessed using the name of the cycle. If you name a cycle, an anchor will be placed at the center of the cycle.
+
+

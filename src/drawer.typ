@@ -368,6 +368,7 @@
 #let draw-molecules-and-link(ctx, body) = {
   let molecule-name = ""
   let drawing = ()
+	let cetz-drawing = ()
   (
     {
       for element in body {
@@ -375,7 +376,7 @@
           continue
         }
         if type(element) == function {
-          (element,)
+					cetz-drawing.push(element)
         } else if "type" not in element {
           panic("Element " + str(element) + " has no type")
         } else if element.type == "molecule" {
@@ -394,7 +395,7 @@
           drawing
         } else if element.type == "branch" {
           let angle = angle-from-ctx(ctx, element.args, cycle-angle(ctx))
-          let (drawing, branch-ctx) = draw-molecules-and-link(
+          let (drawing, branch-ctx, cetz-rec) = draw-molecules-and-link(
             (
               ..ctx,
               in-cycle: false,
@@ -408,6 +409,7 @@
           ctx.links += branch-ctx.links
           ctx.group-id = branch-ctx.group-id
           ctx.link-id = branch-ctx.link-id
+					cetz-drawing += cetz-rec
           drawing
         } else if element.type == "cycle" {
           let cycle-step-angle = 360deg / element.faces
@@ -434,7 +436,7 @@
               ctx.named-molecules.insert(first-molecule, ctx.last-anchor)
             }
           }
-          let (drawing, cycle-ctx) = draw-molecules-and-link(
+          let (drawing, cycle-ctx, cetz-rec) = draw-molecules-and-link(
             (
               ..ctx,
               in-cycle: true,
@@ -452,6 +454,7 @@
           ctx.links += cycle-ctx.links
           ctx.group-id = cycle-ctx.group-id
           ctx.link-id = cycle-ctx.link-id
+					cetz-drawing += cetz-rec
           drawing
         } else {
           panic("Unknown element type " + element.type)
@@ -462,6 +465,7 @@
       }
     },
     ctx,
+		cetz-drawing,
   )
 }
 
@@ -567,13 +571,11 @@
 					circle(to,radius: .1em, fill: red, stroke: red)
 				}
         let length = utils.distance-between(cetz-ctx, from, to)
+				hide(line(from, to, name: link.name))
         group(
-          name: link.name,
           {
             set-origin(from)
             rotate(angle)
-						hide(line((0, 0), (length, 0), name: link.name + "-anchors"))
-						copy-anchors(link.name + "-anchors")
             (link.draw)(length, cetz-ctx, override: link.override)
           },
         )
@@ -587,11 +589,12 @@
   let ctx = default-ctx
   ctx.angle = config.base-angle
   ctx.config = config
-  let (draw, ctx) = draw-molecules-and-link(ctx, body)
+  let (draw, ctx, cetz-drawing) = draw-molecules-and-link(ctx, body)
   let (links, _) = draw-link-decoration(ctx)
   {
     draw
     links
+		cetz-drawing
   }
 }
 
