@@ -317,7 +317,9 @@
 		if ctx.faces-count == 0 {
 			ctx.vertex-anchors.push(from-pos)
 		}
-    ctx.vertex-anchors.push(link-name + "-end-anchor")
+		if ctx.faces-count < ctx.cycle-faces - 1 {
+    	ctx.vertex-anchors.push(link-name + "-end-anchor")
+		}
   }
   ctx = set-last-anchor(
     ctx,
@@ -548,6 +550,7 @@
               first-molecule: first-molecule,
               angle: angle,
               record-edges: record-edges,
+							vertex-anchors: (),
             ),
             element.draw,
           )
