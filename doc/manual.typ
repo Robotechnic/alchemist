@@ -606,6 +606,59 @@ To fix that, you have to use the `from` and `to` arguments of the links to speci
 	})
 ```)
 
+=== Arcs
+
+It is possible to draw arcs in cycles. The `arc` argument is a dictionary with the following entries:
+#argument("start", types: (0deg), default: 0deg)[
+	Angle at which the arc starts.
+]
+#argument("end", types: (0deg), default: 360deg)[
+	Angle at which the arc ends.
+]
+#argument("delta", types: (0deg), default: none)[
+	Angle of the arc in degrees.
+]
+#argument("radius", types: (0.1), default: none)[
+	Radius of the arc in percentage of the smallest distance between two opposite atoms in the cycle. By default, it is set to $0.7$ for cycle with more than $4$ faces and $0.5$ for cycle with $4$ or $3$ faces.
+]
+Any styling argument of the cetz `arc` function can be used.
+
+#example(```
+	#skeletize({
+		cycle(6, arc:(:), {
+			single()
+			single()
+			single()
+			single()
+			single()
+			single()
+		})
+	})
+```)
+
+#example(```
+	#skeletize({
+		cycle(5, arc:(start: 30deg, end: 330deg), {
+			single()
+			single()
+			single()
+			single()
+			single()
+		})
+	})
+```)
+
+#example(```
+	#skeletize({
+		cycle(4, arc:(start: 0deg, delta: 270deg, stroke: (paint: black, dash: "dashed")), {
+			single()
+			single()
+			single()
+			single()
+		})
+	})
+```)
+
 == Custom links
 
 Using the #cmd[build-link] function, you can create your own links. The function passed as argument to #cmd[build-link] must takes three arguments:
@@ -749,7 +802,7 @@ Here, all the used coordinates for the arrows are computed using relative coordi
 
 === Cycles centers
 
-The cycles centers can be accessed using the name of the cycle. If you name a cycle, an anchor will be placed at the center of the cycle.
+The cycles centers can be accessed using the name of the cycle. If you name a cycle, an anchor will be placed at the center of the cycle. If the cycle is incomplete, the missing vertex will be approximated based on the last link and the `atom-sep` value. This will in most cases place the center correctly.
 
 #example(side-by-side: false, ```
 #skeletize({
