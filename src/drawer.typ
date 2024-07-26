@@ -314,12 +314,12 @@
   let length = link.at("atom-sep", default: ctx.config.atom-sep)
   let link-name = link.at("name", default: "link" + str(ctx.link-id))
   if ctx.record-edges {
-		if ctx.faces-count == 0 {
-			ctx.vertex-anchors.push(from-pos)
-		}
-		if ctx.faces-count < ctx.cycle-faces - 1 {
-    	ctx.vertex-anchors.push(link-name + "-end-anchor")
-		}
+    if ctx.faces-count == 0 {
+      ctx.vertex-anchors.push(from-pos)
+    }
+    if ctx.faces-count < ctx.cycle-faces - 1 {
+      ctx.vertex-anchors.push(link-name + "-end-anchor")
+    }
   }
   ctx = set-last-anchor(
     ctx,
@@ -339,99 +339,98 @@
   ctx.link-id += 1
   (
     ctx,
-    draw.get-ctx(ctx => {
-      let (ctx, (x1, y1, _)) = cetz.coordinate.resolve(ctx, from-pos)
-      let length = utils.convert-length(ctx, length)
-      let x = x1 + length * calc.cos(link-angle)
-      let y = y1 + length * calc.sin(link-angle)
+    {
+      let anchor = (to: from-pos, rel: (angle: link-angle, radius: length))
+      if ctx.config.debug {
+        draw.line(from-pos, anchor, stroke: blue + .1em)
+      }
       draw.group(
         name: link-name + "-end-anchor",
         {
-          draw.anchor("default", (x, y))
+          draw.anchor("default", anchor)
         },
       )
-    }),
+    },
   )
 }
 
 #let draw-cycle-center-arc(ctx, name, arc) = {
-	let faces = ctx.cycle-faces
-	let vertex = ctx.vertex-anchors
-	draw.get-ctx(cetz-ctx => {
-		let odd = calc.rem(faces,  2) == 1
-		let (cetz-ctx, ..vertex) = cetz.coordinate.resolve(cetz-ctx, ..vertex)
-		if vertex.len() < faces {
-			let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
-			for i in range(faces - vertex.len()) {
-				let (x, y, _) = vertex.last()
-				vertex.push(
-					(
-						x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
-						y + atom-sep * calc.sin(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
-						0
-					)
-				)	
-			}
-		}
-		let center = (0, 0)
-		let min-radius = 9223372036854775807 // max int
-		for (i,v) in vertex.enumerate() {
-			if (ctx.config.debug) {
-				draw.circle(v, radius: .1em, fill: blue, stroke: blue)
-			}
-			let (x, y, _) = v
-			center = (center.at(0) + x, center.at(1) + y)
-			if odd {
-				let opposite1 = calc.rem(i + calc.div-euclid(faces, 2), faces)
-				let opposite2 = calc.rem(i + calc.div-euclid(faces, 2) + 1, faces)
-				let (ox1, oy1, _) = vertex.at(opposite1)
-				let (ox2, oy2, _) = vertex.at(opposite2)
-				let radius = utils.distance-between(cetz-ctx, (x, y), ((ox1 + ox2) / 2, (oy1 + oy2) / 2)) / 2
-				if radius < min-radius {
-					min-radius = radius
-				}
-			} else {
-				let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
-				let (ox, oy, _) = vertex.at(opposite)
-				let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
-				if radius < min-radius {
-					min-radius = radius
-				}
-			}
-		}
-		center = (center.at(0) / vertex.len(), center.at(1) / vertex.len())
-		if name != none {
-			draw.group(
-				name: name,
-				{
-					draw.anchor("default", center)
-				})
-		}
-		if arc != none {
-			if min-radius == 9223372036854775807 {
-				panic("The cycle has no opposite vertices")
-			}
-			if ctx.cycle-faces > 4 {
-				min-radius *= arc.at("radius", default: 0.7)
-			} else {
-				min-radius *= arc.at("radius", default: 0.5)
-			}
-			let start = arc.at("start", default: 0deg)
-			let end = arc.at("end", default: 360deg)
-			let delta = arc.at("delta", default: end - start)
-			center = (
-				center.at(0) + min-radius * calc.cos(start),
-				center.at(1) + min-radius * calc.sin(start)
-			)
-			draw.arc(
-				center,
-				..arc,
-				radius: min-radius,
-				start: start,
-				delta: delta,
-			)
-		}
-	})
+  let faces = ctx.cycle-faces
+  let vertex = ctx.vertex-anchors
+  draw.get-ctx(cetz-ctx => {
+    let odd = calc.rem(faces, 2) == 1
+    let (cetz-ctx, ..vertex) = cetz.coordinate.resolve(cetz-ctx, ..vertex)
+    if vertex.len() < faces {
+      let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
+      for i in range(faces - vertex.len()) {
+        let (x, y, _) = vertex.last()
+        vertex.push((
+          x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+          y + atom-sep * calc.sin(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+          0,
+        ))
+      }
+    }
+    let center = (0, 0)
+    let min-radius = 9223372036854775807 // max int
+    for (i, v) in vertex.enumerate() {
+      if (ctx.config.debug) {
+        draw.circle(v, radius: .1em, fill: blue, stroke: blue)
+      }
+      let (x, y, _) = v
+      center = (center.at(0) + x, center.at(1) + y)
+      if odd {
+        let opposite1 = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
+        let opposite2 = calc.rem-euclid(i + calc.div-euclid(faces, 2) + 1, faces)
+        let (ox1, oy1, _) = vertex.at(opposite1)
+        let (ox2, oy2, _) = vertex.at(opposite2)
+        let radius = utils.distance-between(cetz-ctx, (x, y), ((ox1 + ox2) / 2, (oy1 + oy2) / 2)) / 2
+        if radius < min-radius {
+          min-radius = radius
+        }
+      } else {
+        let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
+        let (ox, oy, _) = vertex.at(opposite)
+        let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
+        if radius < min-radius {
+          min-radius = radius
+        }
+      }
+    }
+    center = (center.at(0) / vertex.len(), center.at(1) / vertex.len())
+    if name != none {
+      draw.group(
+        name: name,
+        {
+          draw.anchor("default", center)
+        },
+      )
+    }
+    if arc != none {
+      if min-radius == 9223372036854775807 {
+        panic("The cycle has no opposite vertices")
+      }
+      if ctx.cycle-faces > 4 {
+        min-radius *= arc.at("radius", default: 0.7)
+      } else {
+        min-radius *= arc.at("radius", default: 0.5)
+      }
+      let start = arc.at("start", default: 0deg)
+      let end = arc.at("end", default: 360deg)
+      let delta = arc.at("delta", default: end - start)
+      center = (
+        center.at(0) + min-radius * calc.cos(start),
+        center.at(1) + min-radius * calc.sin(start),
+      )
+      draw.arc(
+        center,
+        ..arc,
+        radius: min-radius,
+        start: start,
+        delta: delta,
+      )
+    }
+  })
 
 }
 
@@ -536,8 +535,8 @@
             name = element.args.at("name")
             record-edges = true
           } else if "arc" in element.args {
-						record-edges = true
-					}
+            record-edges = true
+          }
           let (drawing, cycle-ctx, cetz-rec) = draw-molecules-and-link(
             (
               ..ctx,
@@ -550,7 +549,7 @@
               first-molecule: first-molecule,
               angle: angle,
               record-edges: record-edges,
-							vertex-anchors: (),
+              vertex-anchors: (),
             ),
             element.draw,
           )
@@ -560,9 +559,9 @@
           ctx.link-id = cycle-ctx.link-id
           cetz-drawing += cetz-rec
           drawing
-					if record-edges {
-						draw-cycle-center-arc(cycle-ctx, name, element.args.at("arc", default: none))
-					}
+          if record-edges {
+            draw-cycle-center-arc(cycle-ctx, name, element.args.at("arc", default: none))
+          }
         } else {
           panic("Unknown element type " + element.type)
         }
@@ -576,11 +575,7 @@
   )
 }
 
-#let molecule-anchor(cetz-ctx, angle, molecule, id) = {
-  let (cetz-ctx, (x, y, _)) = cetz.coordinate.resolve(
-    cetz-ctx,
-    (name: molecule, anchor: (id, "center")),
-  )
+#let anchor-north-east(cetz-ctx, (x, y, _), delta, molecule, id) = {
   let (cetz-ctx, (_, b, _)) = cetz.coordinate.resolve(
     cetz-ctx,
     (name: molecule, anchor: (id, "north")),
@@ -589,12 +584,86 @@
     cetz-ctx,
     (name: molecule, anchor: (id, "east")),
   )
-  let a = (a - x) * 1.8
-  let b = (b - y) * 2.3
+  let a = (a - x) + delta
+  let b = (b - y) + delta
+  (a, b)
+}
+
+#let anchor-north-west(cetz-ctx, (x, y, _), delta, molecule, id) = {
+  let (cetz-ctx, (_, b, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "north")),
+  )
+  let (cetz-ctx, (a, _, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "west")),
+  )
+  let a = (x - a) + delta
+  let b = (b - y) + delta
+  (a, b)
+}
+
+#let anchor-south-west(cetz-ctx, (x, y, _), delta, molecule, id) = {
+  let (cetz-ctx, (_, b, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "south")),
+  )
+  let (cetz-ctx, (a, _, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "west")),
+  )
+  let a = (x - a) + delta
+  let b = (y - b) + delta
+  (a, b)
+}
+
+#let anchor-south-east(cetz-ctx, (x, y, _), delta, molecule, id) = {
+  let (cetz-ctx, (_, b, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "south")),
+  )
+  let (cetz-ctx, (a, _, _)) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "east")),
+  )
+  let a = (a - x) + delta
+  let b = (y - b) + delta
+  (a, b)
+}
+
+#let molecule-anchor(ctx, cetz-ctx, angle, molecule, id) = {
+  let delta = utils.convert-length(cetz-ctx, ctx.config.delta)
+  let (cetz-ctx, center) = cetz.coordinate.resolve(
+    cetz-ctx,
+    (name: molecule, anchor: (id, "center")),
+  )
+
+  let (a, b) = if utils.angle-in-range(angle, 0deg, 90deg) {
+    anchor-north-east(cetz-ctx, center, delta, molecule, id)
+  } else if utils.angle-in-range(angle, 90deg, 180deg) {
+    anchor-north-west(cetz-ctx, center, delta, molecule, id)
+  } else if utils.angle-in-range(angle, 180deg, 270deg) {
+    anchor-south-west(cetz-ctx, center, delta, molecule, id)
+  } else {
+    anchor-south-east(cetz-ctx, center, delta, molecule, id)
+  }
+
+  // https://www.petercollingridge.co.uk/tutorials/computational-geometry/finding-angle-around-ellipse/
+  let angle = if utils.angle-in-range-inclusive(angle, 0deg, 90deg) or utils.angle-in-range-strict(
+    angle,
+    270deg,
+    360deg,
+  ) {
+    calc.atan(calc.tan(angle) * a / b)
+  } else {
+    calc.atan(calc.tan(angle) * a / b) - 180deg
+  }
+
+
   if a == 0 or b == 0 {
     panic("Ellipse " + ellipse + " has no width or height")
   }
-  (x + a * calc.cos(angle), y + b * calc.sin(angle))
+  (center.at(0) + a * calc.cos(angle), center.at(1) + b * calc.sin(angle))
 }
 
 #let calculate-link-anchors(ctx, cetz-ctx, link) = {
@@ -618,8 +687,8 @@
         )
       }
     }
-    let start = molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from))
-    let end = molecule-anchor(cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
+    let start = molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from))
+    let end = molecule-anchor(ctx, cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
     ((start, end), utils.angle-between(cetz-ctx, start, end))
   } else if link.to-name != none {
     if link.to == none {
@@ -646,6 +715,7 @@
       )
     }
     let end-anchor = molecule-anchor(
+      ctx,
       cetz-ctx,
       link.angle + 180deg,
       link.to-name,
@@ -661,7 +731,7 @@
   } else if link.from-name != none {
     (
       (
-        molecule-anchor(cetz-ctx, link.angle, link.from-name, str(link.from)),
+        molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from)),
         link.name + "-end-anchor",
       ),
       link.angle,
@@ -714,9 +784,9 @@
       config.insert(key, value)
     }
   }
-	if "debug" not in config {
-		config.insert("debug", debug)
-	}
+  if "debug" not in config {
+    config.insert("debug", debug)
+  }
   cetz.canvas(
     debug: debug,
     background: background,
