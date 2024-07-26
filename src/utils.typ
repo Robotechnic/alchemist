@@ -21,6 +21,9 @@
   if type(a) != float and type(a) != int {
     panic("angle-correction: The angle must be a number or an angle")
   }
+	while a < 0 {
+		a = a + 360
+	}
   calc.rem(a, 360) * 1deg
 }
 
@@ -29,12 +32,24 @@
   if to < from {
     panic("angle-in-range: The 'to' angle must be greater than the 'from' angle")
   }
-  angle = if angle < 0deg {
-    angle + 360deg
-  } else {
-    angle
-  }
+  angle = angle-correction(angle)
   angle >= from and angle < to
+}
+
+#let angle-in-range-strict(angle, from, to) = {
+	if to < from {
+		panic("angle-in-range: The 'to' angle must be greater than the 'from' angle")
+	}
+	angle = angle-correction(angle)
+	angle > from and angle < to
+}
+
+#let angle-in-range-inclusive(angle, from, to) = {
+	if to < from {
+		panic("angle-in-range: The 'to' angle must be greater than the 'from' angle")
+	}
+	angle = angle-correction(angle)
+	angle >= from and angle <= to
 }
 
 /// get the angle between two anchors
