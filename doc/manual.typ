@@ -751,4 +751,69 @@ Here, all the used coordinates for the arrows are computed using relative coordi
 
 The cycles centers can be accessed using the name of the cycle. If you name a cycle, an anchor will be placed at the center of the cycle.
 
+#example(side-by-side: false, ```
+#skeletize({
+  import cetz.draw: *
+  molecule("A")
+  cycle(
+    5,
+    name: "cycle",
+    {
+      single()
+      molecule("B")
+      single()
+      molecule("C")
+      single()
+      molecule("D")
+      single()
+      molecule("E")
+      single()
+    },
+  )
+  content(
+    (to: "cycle", rel: (angle: 30deg, radius: 2)),
+    "Center",
+    name: "label",
+  )
+  line(
+    "cycle",
+    (to: "label.west", rel: (-1pt, -.5em)),
+    (to: "label.east", rel: (1pt, -.5em)),
+    stroke: red,
+  )
+  circle(
+    "cycle",
+    radius: .1em,
+    fill: red,
+    stroke: red,
+  )
+})
+```)
 
+#example(```
+	#skeletize({
+		import cetz.draw: *
+		cycle(5, name: "c1", {
+			single()
+			single()
+			single()
+			branch({
+				single()
+				cycle(3, name: "c2", {
+					single()
+					single()
+					single()
+				})
+			})
+			single()
+			single()
+		})
+		hobby(
+			"c1",
+			("c1", 0.5, -60deg, "c2"),
+			"c2",
+			stroke: red,
+			mark: (end: ">"),
+		)
+	})
+```)
