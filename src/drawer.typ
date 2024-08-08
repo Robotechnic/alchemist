@@ -157,9 +157,9 @@
 }
 
 #let draw-molecule-text(mol) = {
-  for (id, eq) in mol.molecules.enumerate() {
+  for (id, eq) in mol.atoms.enumerate() {
     let name = str(id)
-    // draw the molecules of the group one after the other from left to right
+    // draw atoms of the group one after the other from left to right
     draw.content(
       name: name,
       anchor: "west",

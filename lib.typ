@@ -4,6 +4,7 @@
 #import "src/drawer.typ"
 #import "src/drawer.typ" : skeletize
 #import "src/links.typ" : *
+#import "src/molecule.typ" : *
 
 /// === Molecule function
 /// Build a molecule group based on mol
@@ -14,44 +15,33 @@
 ///   molecule("H_2O")
 /// })
 ///```)
+/// It is possible to use an equation as a molecule. In this case, the spliting of the equation uses the same rules as in the string case. However, you can use parenthesis to group elements together.
 /// #example(```
 /// #skeletize({
-///   molecule("2Aa_7 3Bb")
+///   molecule($C(C H_3)_3$)
 /// })
 ///```)
-/// - name (string): The name of the molecule. It is used as the cetz name of the molecule and to link other molecules to it.
+/// - name (content): The name of the molecule. It is used as the cetz name of the molecule and to link other molecules to it.
 /// - links (dictionary): The links between this molecule and the previous ones. The key is the name of the molecule and the value is the link you want to draw between the two molecules.
 ///
 /// Note that the antom-sep and angle arguments are ignored
-/// - mol (string): The string representing the molecule
+/// - mol (string, equation): The string representing the molecule or an equation of the molecule
 /// -> drawable
 #let molecule(name: none, links: (:), mol) = {
-  let aux(str) = {
-    let match = str.match(regex("^ *([0-9]*[A-Z][a-z]*)(_[0-9]+)?"))
-    if match == none {
-      panic(str + " is not a valid atom")
-    }
-    let eq = "\"" + match.captures.at(0) + "\""
-    if match.captures.len() >= 2 {
-      eq += match.captures.at(1)
-    }
-    let eq = math.equation(eval(eq, mode: "math"))
-    (eq, match.end)
-  }
-
-  let molecules = ()
-  while not mol.len() == 0 {
-    let (eq, end) = aux(mol)
-    mol = mol.slice(end)
-    molecules.push(eq)
-  }
+  let atoms = if type(mol) == str {
+		split-string(mol)
+	} else if mol.func() == math.equation {
+		split-equation(mol, equation: true)
+	} else {
+		panic("Invalid molecule content")
+	}
   (
     (
       type: "molecule",
       name: name,
-      molecules: molecules,
+      atoms: atoms,
       links: links,
-      count: molecules.len(),
+      count: atoms.len(),
     ),
   )
 }
