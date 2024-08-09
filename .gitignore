@@ -2,3 +2,4 @@
 test*.typ
 test*.pdf
 images/*.typ
+autosubmit.sh
