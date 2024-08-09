@@ -13,6 +13,7 @@
   link-id: 0,                  // id of the current link
 	links: (),                   // list of links to draw
   hooks: (:),                  // list of hooks
+	hooks-links: (),						 // list of links to hooks
   relative-angle: 0deg,        // current global relative angle
   angle: 0deg,                 // current global angle
 
@@ -36,15 +37,19 @@
   (..ctx, last-anchor: anchor)
 }
 
-#let link-molecule-index(angle, end, count) = {
+#let link-molecule-index(angle, end, count, vertical) = {
   if not end {
-    if utils.angle-in-range-strict(angle, 90deg, 270deg) {
+    if vertical and utils.angle-in-range-strict(angle, 0deg, 180deg) {
+      0
+    } else if utils.angle-in-range-strict(angle, 90deg, 270deg) {
       0
     } else {
       count
     }
   } else {
-    if utils.angle-in-range-strict(angle, 90deg, 270deg) {
+    if vertical and utils.angle-in-range-strict(angle, 0deg, 180deg) {
+      count
+    } else if utils.angle-in-range-strict(angle, 90deg, 270deg) {
       count
     } else {
       0
@@ -163,15 +168,24 @@
     // draw atoms of the group one after the other from left to right
     draw.content(
       name: name,
-      anchor: "west",
+      anchor: if mol.vertical {
+        "north"
+      } else {
+        "west"
+      },
       (
         if id == 0 {
           (0, 0)
+        } else if mol.vertical {
+          (to: str(id - 1) + ".south", rel: (0, -.2em))
         } else {
           str(id - 1) + ".east"
         }
       ),
-      eq,
+      {
+        show math.equation: math.upright
+        eq
+      },
     )
     id += 1
   }
@@ -190,11 +204,12 @@
   let (anchor, side, coord) = if ctx.last-anchor.type == "coord" {
     ("east", true, ctx.last-anchor.anchor)
   } else if ctx.last-anchor.type == "link" {
-    if ctx.last-anchor.to == -1 {
+    if ctx.last-anchor.to == none {
       ctx.last-anchor.to = link-molecule-index(
         ctx.last-anchor.angle,
         true,
         mol.count - 1,
+        mol.vertical,
       )
     }
     let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
@@ -205,11 +220,10 @@
   }
   ctx = set-last-anchor(
     ctx,
-    (type: "molecule", name: name, count: mol.at("count")),
+    (type: "molecule", name: name, count: mol.at("count"), vertical: mol.vertical),
   )
   ctx.group-id += 1
   (
-    name,
     ctx,
     {
       draw.group(
@@ -287,8 +301,7 @@
   ctx.relative-angle = link-angle
   let override = angle-override(link-angle, ctx)
 
-  let to-connection = link-molecule-index(link-angle, true, -1)
-  to-connection = link.at("to", default: to-connection)
+  let to-connection = link.at("to", default: none)
   let from-connection = none
   let from-name = none
 
@@ -299,6 +312,7 @@
       link-angle,
       false,
       ctx.last-anchor.count - 1,
+      ctx.last-anchor.vertical,
     )
     from-connection = link.at("from", default: from-connection)
     from-name = ctx.last-anchor.name
@@ -358,7 +372,7 @@
 /// Insert missing vertices in the cycle
 #let missing-vertices(ctx, vertex, cetz-ctx) = {
   let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
-  for i in range(faces - vertex.len()) {
+  for i in range(ctx.cycle-faces - vertex.len()) {
     let (x, y, _) = vertex.last()
     vertex.push((
       x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
@@ -371,7 +385,8 @@
 
 #let cycle-center-radius(ctx, cetz-ctx, vertex) = {
   let min-radius = max-int
-	let center = (0, 0)
+  let center = (0, 0)
+  let faces = ctx.cycle-faces
   let odd = calc.rem(faces, 2) == 1
   for (i, v) in vertex.enumerate() {
     if (ctx.config.debug) {
@@ -445,32 +460,71 @@
 
 }
 
-#let draw-molecule-links(mol, mol-name, ctx) = {
-  ctx.hooks.insert(mol-name, mol)
-  let last-anchor = ctx.last-anchor
-  for (to-name, (link,)) in mol.links {
-    ctx.last-anchor = last-anchor
+#let draw-hooks-links(links, name, ctx, from-mol) = {
+  for (to-name, (link,)) in links {
     if to-name not in ctx.hooks {
       panic("Molecule " + to-name + " does not exist")
     }
-    ctx.links.push((
-      type: "link",
-      name: link.at("name", default: "link" + str(ctx.link-id)),
-      from-pos: (name: mol-name, anchor: "center"),
-      from-name: mol-name,
-      to-name: to-name,
-      override: angle-override(ctx.angle, ctx),
-      from: none,
-      to: none,
-      draw: link.draw,
-    ))
+    let to-hook = ctx.hooks.at(to-name)
+    if to-hook.type == "molecule" {
+      ctx.links.push((
+        type: "link",
+        name: link.at("name", default: "link" + str(ctx.link-id)),
+        from-pos: if from-mol {
+          (name: name, anchor: "center")
+        } else {
+          name + "-end-anchor"
+        },
+        from-name: if from-mol {
+          name
+        },
+        to-name: to-name,
+        from: none,
+        to: none,
+        override: angle-override(ctx.angle, ctx),
+        draw: link.draw,
+      ))
+    } else if to-hook.type == "hook" {
+      ctx.links.push((
+        type: if from-mol {
+          "mol-hook-link"
+        } else {
+          "link-hook-link"
+        },
+        name: link.at("name", default: "link" + str(ctx.link-id)),
+        from-pos: if from-mol {
+          (name: name, anchor: "center")
+        } else {
+          name + "-end-anchor"
+        },
+        from-name: if from-mol {
+          name
+        },
+        to-name: to-name,
+        to-hook: to-hook.hook,
+        override: angle-override(ctx.angle, ctx),
+        draw: link.draw,
+      ))
+    } else {
+      panic("Unknown hook type " + ctx.hook.at(to-name).type)
+    }
     ctx.link-id += 1
   }
   ctx
 }
 
+#let update-parent-context(parent-ctx, ctx) = {
+  (
+    ..parent-ctx,
+    hooks: parent-ctx.hooks + ctx.hooks,
+    hooks-links: parent-ctx.hooks-links + ctx.hooks-links,
+    links: parent-ctx.links + ctx.links,
+    group-id: ctx.group-id,
+    link-id: ctx.link-id,
+  )
+}
+
 #let draw-molecules-and-link(ctx, body) = {
-  let molecule-name = ""
   let drawing = ()
   let cetz-drawing = ()
   (
@@ -487,16 +541,20 @@
           if ctx.first-branch {
             panic("A molecule can not be the first element in a cycle")
           }
-          (molecule-name, ctx, drawing) = draw-molecule(element, ctx)
+          (ctx, drawing) = draw-molecule(element, ctx)
           drawing
-          if element.at("links").len() != 0 {
-            ctx = draw-molecule-links(element, molecule-name, ctx)
+          if element.links.len() != 0 {
+            ctx.hooks.insert(ctx.last-anchor.name, element)
+            ctx.hooks-links.push((element.links, ctx.last-anchor.name, true))
           }
         } else if element.type == "link" {
           ctx.first-branch = false
           (ctx, drawing) = draw-link(element, ctx)
           ctx.faces-count += 1
           drawing
+          if element.links.len() != 0 {
+            ctx.hooks-links.push((element.links, ctx.last-anchor.name, false))
+          }
         } else if element.type == "branch" {
           let angle = angle-from-ctx(ctx, element.args, cycle-angle(ctx))
           let (drawing, branch-ctx, cetz-rec) = draw-molecules-and-link(
@@ -509,10 +567,7 @@
             ),
             element.draw,
           )
-          ctx.hooks += branch-ctx.hooks
-          ctx.links += branch-ctx.links
-          ctx.group-id = branch-ctx.group-id
-          ctx.link-id = branch-ctx.link-id
+          ctx = update-parent-context(ctx, branch-ctx)
           cetz-drawing += cetz-rec
           drawing
         } else if element.type == "cycle" {
@@ -564,17 +619,23 @@
             ),
             element.draw,
           )
-          ctx.hooks += cycle-ctx.hooks
-          ctx.links += cycle-ctx.links
-          ctx.group-id = cycle-ctx.group-id
-          ctx.link-id = cycle-ctx.link-id
+          ctx = update-parent-context(ctx, cycle-ctx)
           cetz-drawing += cetz-rec
           drawing
           if record-vertex {
             draw-cycle-center-arc(cycle-ctx, name, element.args.at("arc", default: none))
           }
         } else if element.type == "hook" {
-
+          if element.name in ctx.hooks {
+            panic("Hook " + element.name + " already exists")
+          }
+          if ctx.last-anchor.type == "link" {
+            ctx.hooks.insert(element.name, (type: "hook", hook: ctx.last-anchor.name + "-end-anchor"))
+          } else if ctx.last-anchor.type == "coord" {
+            ctx.hooks.insert(element.name, (type: "hook", hook: ctx.last-anchor.anchor))
+          } else {
+            panic("A hook must placed after a link or at the beginning of the skeleton")
+          }
         } else {
           panic("Unknown element type " + element.type)
         }
@@ -679,78 +740,133 @@
   (center.at(0) + a * calc.cos(angle), center.at(1) + b * calc.sin(angle))
 }
 
-#let calculate-link-anchors(ctx, cetz-ctx, link) = {
-  if link.to-name != none and link.from-name != none {
-    let to-pos = (name: link.to-name, anchor: "center")
-    if link.to == none or link.from == none {
-      let angle = utils.angle-between(cetz-ctx, link.from-pos, to-pos)
-      link.angle = angle
-      if link.from == none {
-        link.from = link-molecule-index(
-          angle,
-          false,
-          ctx.hooks.at(link.from-name).count - 1,
-        )
-      }
-      if link.to == none {
-        link.to = link-molecule-index(
-          angle,
-          true,
-          ctx.hooks.at(link.to-name).count - 1,
-        )
-      }
-    }
-    let start = molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from))
-    let end = molecule-anchor(ctx, cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
-    ((start, end), utils.angle-between(cetz-ctx, start, end))
-  } else if link.to-name != none {
-    if link.to == none {
-      let angle = utils.angle-correction(
-        utils.angle-between(
-          cetz-ctx,
-          link.from-pos,
-          (name: link.to-name, anchor: "center"),
-        ),
+#let calculate-mol-mol-link-anchors(ctx, cetz-ctx, link) = {
+  let to-pos = (name: link.to-name, anchor: "center")
+  if link.to == none or link.from == none {
+    let angle = utils.angle-between(cetz-ctx, link.from-pos, to-pos)
+    link.angle = angle
+    if link.from == none {
+      link.from = link-molecule-index(
+        angle,
+        false,
+        ctx.hooks.at(link.from-name).count - 1,
+        ctx.hooks.at(link.from-name).vertical,
       )
+    }
+    if link.to == none {
       link.to = link-molecule-index(
         angle,
         true,
         ctx.hooks.at(link.to-name).count - 1,
-      )
-      link.angle = angle
-    } else if "angle" not in link {
-      link.angle = utils.angle-correction(
-        utils.angle-between(
-          cetz-ctx,
-          link.from-pos,
-          (name: link.to-name, anchor: (str(link.to), "center")),
-        ),
+        ctx.hooks.at(link.to-name).vertical,
       )
     }
-    let end-anchor = molecule-anchor(
-      ctx,
-      cetz-ctx,
-      link.angle + 180deg,
-      link.to-name,
-      str(link.to),
-    )
-    (
-      (
+  }
+  let start = molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from))
+  let end = molecule-anchor(ctx, cetz-ctx, link.angle + 180deg, link.to-name, str(link.to))
+  ((start, end), utils.angle-between(cetz-ctx, start, end))
+}
+
+#let calculate-link-mol-anchors(ctx, cetz-ctx, link) = {
+  if link.to == none {
+    let angle = utils.angle-correction(
+      utils.angle-between(
+        cetz-ctx,
         link.from-pos,
-        end-anchor,
+        (name: link.to-name, anchor: "center"),
       ),
-      utils.angle-between(cetz-ctx, link.from-pos, end-anchor),
     )
-  } else if link.from-name != none {
+    link.to = link-molecule-index(
+      angle,
+      true,
+      ctx.hooks.at(link.to-name).count - 1,
+      ctx.hooks.at(link.to-name).vertical,
+    )
+    link.angle = angle
+  } else if "angle" not in link {
+    link.angle = utils.angle-correction(
+      utils.angle-between(
+        cetz-ctx,
+        link.from-pos,
+        (name: link.to-name, anchor: (str(link.to), "center")),
+      ),
+    )
+  }
+  let end-anchor = molecule-anchor(
+    ctx,
+    cetz-ctx,
+    link.angle + 180deg,
+    link.to-name,
+    str(link.to),
+  )
+  (
     (
-      (
-        molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from)),
-        link.name + "-end-anchor",
-      ),
-      link.angle,
-    )
+      link.from-pos,
+      end-anchor,
+    ),
+    utils.angle-between(cetz-ctx, link.from-pos, end-anchor),
+  )
+}
+
+#let calculate-mol-link-anchors(ctx, cetz-ctx, link) = {
+  (
+    (
+      molecule-anchor(ctx, cetz-ctx, link.angle, link.from-name, str(link.from)),
+      link.name + "-end-anchor",
+    ),
+    link.angle,
+  )
+}
+
+#let calculate-mol-hook-link-anchors(ctx, cetz-ctx, link) = {
+  let hook = ctx.hooks.at(link.to-name)
+  let angle = utils.angle-correction(
+    utils.angle-between(cetz-ctx, link.from-pos, hook.hook),
+  )
+  let from = link-molecule-index(
+    angle,
+    false,
+    ctx.hooks.at(link.from-name).count - 1,
+    ctx.hooks.at(link.from-name).vertical,
+  )
+  let start-anchor = molecule-anchor(ctx, cetz-ctx, angle, link.from-name, str(from))
+  (
+    (
+      start-anchor,
+      hook.hook,
+    ),
+    utils.angle-between(cetz-ctx, start-anchor, hook.hook),
+  )
+}
+
+#let calculate-link-hook-link-anchors(ctx, cetz-ctx, link) = {
+  let hook = ctx.hooks.at(link.to-name)
+  (
+    (
+      link.from-pos,
+      hook.hook,
+    ),
+    utils.angle-between(cetz-ctx, link.from-pos, hook.hook),
+  )
+}
+
+#let calculate-link-link-anchors(link) = {
+  ((link.from-pos, link.name + "-end-anchor"), link.angle)
+}
+
+#let calculate-link-anchors(ctx, cetz-ctx, link) = {
+  if link.type == "mol-hook-link" {
+    calculate-mol-hook-link-anchors(ctx, cetz-ctx, link)
+  } else if link.type == "link-hook-link" {
+    calculate-link-hook-link-anchors(ctx, cetz-ctx, link)
+  } else if link.to-name != none and link.from-name != none {
+    calculate-mol-mol-link-anchors(ctx, cetz-ctx, link)
+  } else if link.to-name != none {
+    calculate-link-mol-anchors(ctx, cetz-ctx, link)
+  } else if link.from-name != none {
+    calculate-mol-link-anchors(ctx, cetz-ctx, link)
   } else {
-    ((link.from-pos, link.name + "-end-anchor"), link.angle)
+    calculate-link-link-anchors(link)
   }
 }
 
@@ -782,6 +898,9 @@
   ctx.angle = config.base-angle
   ctx.config = config
   let (draw, ctx, cetz-drawing) = draw-molecules-and-link(ctx, body)
+  for (links, name, from-mol) in ctx.hooks-links {
+    ctx = draw-hooks-links(links, name, ctx, from-mol)
+  }
   let (links, _) = draw-link-decoration(ctx)
   {
     draw

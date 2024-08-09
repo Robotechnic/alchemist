@@ -139,6 +139,10 @@ Links functions are used to draw links between molecules. They all have the same
   Index of the molecule in the group to end the link to. By default, it is computed depending on the angle of the link.
 ]
 
+#argument("links", types: ((:)))[
+	Dictionary of links to other molecules or hooks. The key is the name of the molecule or the hook and the value is the link function.
+]
+
 ==== Links
 #tidy-module(
   read("../src/links.typ"),
@@ -151,7 +155,7 @@ Links functions are used to draw links between molecules. They all have the same
 = Drawing molecules
 == Atoms
 
-In alchemist, the name of the function #cmd("molecule") is used to create a group of atom but here it is a little bit abusive as it do not necessarily represent real molecules. An atom is in our case something of the form: optional number + capital letter + optional lowercase letter + optional \_ number. For the ones interested here is the regex used: `^ *([0-9]*[A-Z][a-z]*)(_[0-9]+)?`.
+In alchemist, the name of the function #cmd("molecule") is used to create a group of atom but here it is a little bit abusive as it do not necessarily represent real molecules. An atom is in our case something of the form: optional number + capital letter + optional lowercase letter  followed by indices or exponent.
 
 #info[
   For instance, $H_2O$ is a molecule of the atoms $H_2$ and $O$.
@@ -162,9 +166,9 @@ In alchemist, the name of the function #cmd("molecule") is used to create a grou
       columns: 2,
       column-gutter: 1em,
       row-gutter: .65em,
-      $H_2O$, skeletize(debug: true, molecule("H_2O")),
-      $C H_4$, skeletize(debug: true, molecule("CH_4")),
-      $C_2 H_6$, skeletize(debug: true, molecule("C_2H_6")),
+      $H_2O$, skeletize(debug: true, molecule($H_2O$)),
+      $C H_4$, skeletize(debug: true, molecule($C H_4$)),
+      $C_2 H_6$, skeletize(debug: true, molecule($C_2H_6$)),
     ),
   )
 ]
@@ -844,29 +848,292 @@ The cycles centers can be accessed using the name of the cycle. If you name a cy
 ```)
 
 #example(```
-	#skeletize({
-		import cetz.draw: *
-		cycle(5, name: "c1", {
+#skeletize({
+	import cetz.draw: *
+	cycle(5, name: "c1", {
+		single()
+		single()
+		single()
+		branch({
 			single()
+			cycle(3, name: "c2", {
+				single()
+				single()
+				single()
+			})
+		})
+		single()
+		single()
+	})
+	hobby(
+		"c1",
+		("c1", 0.5, -60deg, "c2"),
+		"c2",
+		stroke: red,
+		mark: (end: ">"),
+	)
+})
+```)
+
+== Examples
+
+The following examples are the same ones as in the Chemfig documentation. They are here for two purposes: To show you how to draw the same structures with Alchemist and to show you how to use the package.
+
+=== Ethanol
+
+#example(```
+#skeletize({
+	molecule("H")
+	single()
+	molecule("C")
+	branch({
+		single(angle:2)
+		molecule("H")
+	})
+	branch({
+		single(angle:-2)
+		molecule("H")
+	})
+	single()
+	molecule("C")
+	branch({
+		single(angle:-1)
+		molecule("H")
+	})
+	branch({
+		double(angle:1)
+		molecule("O")
+	})
+})
+```)
+
+#pagebreak()
+=== 2-Amino-4-oxohexanoic acid
+
+#example(```
+#skeletize(
+	config: (angle-increment: 30deg), 
+	{
+	single(angle:1)
+	single(angle:-1)
+	branch({
+		double(angle:-3)
+		molecule("O")
+	})
+	single(angle:1)
+	single(angle:-1)
+	branch({
+		single(angle:-3)
+		molecule("NH_2")
+	})
+	single(angle:1)
+	branch({
+		double(angle:3)
+		molecule("O")
+	})
+	single(angle:-1)
+	molecule("OH")
+})
+```)
+
+#pagebreak()
+
+
+=== Glucose
+
+#example(side-by-side: false,```
+#skeletize(
+	config: (angle-increment: 30deg),
+	{
+	molecule("HO")
+	single(angle:-1)
+	single(angle:1)
+	branch({
+		cram-filled-left(angle: 3)
+		molecule("OH")
+	})
+	single(angle:-1)
+	branch({
+		cram-dashed-left(angle: -3)
+		molecule("OH")
+	})
+	single(angle:1)
+	branch({
+		cram-dashed-left(angle: 3)
+		molecule("OH")
+	})
+	single(angle:-1)
+	branch({
+		cram-dashed-left(angle: -3)
+		molecule("OH")
+	})
+	single(angle:1)
+	branch({
+		double(angle: 3)
+		molecule("O")
+	})
+	single(angle:-1)
+	molecule("H")
+})
+```)
+
+#pagebreak()
+
+=== Fisher projection
+
+#example(```
+#let fish-left = {
+	single()
+	branch({
+		single(angle:4)
+		molecule("H")
+	})
+	branch({
+		single(angle:0)
+		molecule("OH")
+	})
+}
+#let fish-right = {
+	single()
+	branch({
+		single(angle:4)
+		molecule("OH")
+	})
+	branch({
+		single(angle:0)
+		molecule("H")
+	})
+}
+#skeletize(
+	config: (base-angle: 90deg), 
+	{
+	molecule("OH")
+	single(angle:3)
+	fish-right
+	fish-right
+	fish-left
+	fish-right
+	single()
+	double(angle: 1)
+	molecule("O")	
+})
+```)
+
+#pagebreak()
+
+=== $alpha$-D-glucose
+
+#example(```
+#skeletize({
+	hook("start")
+	branch({
+		single(absolute: 190deg)
+		molecule("OH")
+	})
+	single(absolute: -50deg)
+	branch({
+		single(absolute: 170deg)
+		molecule("OH")
+	})
+	single(absolute: 10deg)
+	branch({
+		single(
+			absolute: -55deg,
+			atom-sep: 0.7
+		)
+		molecule("OH")
+	})
+	single(absolute: -10deg)
+	branch({
+		single(angle: -2, atom-sep: 0.7)
+		molecule("OH")
+	})
+	single(absolute: 130deg)
+	molecule("O")
+	single(absolute: 190deg, links: ("start": single()))
+	branch({
+		single(
+			absolute: 150deg, 
+			atom-sep: 0.7
+		)
+		single(angle: 2, atom-sep: 0.7)
+		molecule("OH")
+	})
+})
+```)
+
+#pagebreak()
+=== Adrenaline
+
+#example(```
+#skeletize({
+	cycle(6, {
+		branch({
 			single()
+			molecule("HO")
+		})
+		single()
+		double()
+		cycle(6,{
+			single(stroke:transparent)
+			single(
+				stroke:transparent, 
+				to: 1
+			)
+			molecule("HN")
+			branch({
+				single(angle:-1)
+				molecule("CH_3")
+			})
+			single(from:1)
 			single()
 			branch({
-				single()
-				cycle(3, name: "c2", {
-					single()
-					single()
-					single()
-				})
+				cram-filled-left(angle: 2)
+				molecule("OH")
 			})
 			single()
-			single()
 		})
-		hobby(
-			"c1",
-			("c1", 0.5, -60deg, "c2"),
-			"c2",
-			stroke: red,
-			mark: (end: ">"),
-		)
+		single()
+		double()
+		single()
+		branch({
+			single()
+			molecule("HO")
+		})
+		double()
 	})
+})
+```)
+
+#pagebreak()
+
+=== Guanine
+
+#example(```
+#skeletize({
+	cycle(6, {
+		branch({
+			single()
+			molecule("H_2N")
+		})
+		double()
+		molecule("N")
+		single()
+		cycle(6, {
+			single()
+			molecule("NH", vertical: true)
+			single()
+			double()
+			molecule("N", links: (
+				"N-horizon": single()
+			))
+		})
+		single()
+		hook("N-horizon")
+		single()
+		single()
+		molecule("NH")
+		single(from: 1)
+	})
+})
 ```)

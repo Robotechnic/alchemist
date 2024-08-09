@@ -21,3 +21,6 @@ module:
 
 manual:
 	typst compile ./doc/manual.typ --root .
+
+watch:
+	typst watch ./doc/manual.typ --root .

@@ -13,17 +13,19 @@
     if args.pos().len() != 0 {
       panic("Links takes no positional arguments")
     }
+		let args = args.named()
     (
       (
         type: "link",
         draw: (length, ctx, override: (:)) => {
-          let args = args.named()
+					let args = args
           for (key, val) in override {
             args.insert(key, val)
           }
           draw-function(length, ctx, args)
         },
-        ..args.named(),
+				links: (:),
+        ..args,
       ),
     )
   }
