@@ -28,8 +28,14 @@
 ///
 /// Note that the antom-sep and angle arguments are ignored
 /// - mol (string, equation): The string representing the molecule or an equation of the molecule
+/// - vertical (boolean): If true, the molecule is drawn vertically
+/// #example(```
+/// #skeletize({
+///   molecule("ABCD", vertical: true)
+/// })
+///```)
 /// -> drawable
-#let molecule(name: none, links: (:), mol) = {
+#let molecule(name: none, links: (:), vertical: false, mol) = {
   let atoms = if type(mol) == str {
 		split-string(mol)
 	} else if mol.func() == math.equation {
@@ -43,6 +49,7 @@
       name: name,
       atoms: atoms,
       links: links,
+			vertical: vertical,
       count: atoms.len(),
     ),
   )
@@ -50,16 +57,14 @@
 
 /// === Hooks
 /// Create a hook in the molecule. It allows tu connect links to the place where the hook is.
-/// Hooks are placed after links or after a molecule. If the hook is after a molecule, an angle can be specified to place the hook.
+/// Hooks are placed at the end of links or at the beginning of the molecule.
 /// - name (string): The name of the hook
-/// - angle (angle): The angle of the hook around the molecule. This has no effect if the hook is placed after a link.
 /// -> drawable
-#let hook(name, angle: 0deg) = {
+#let hook(name) = {
 	(
 		(
 			type: "hook",
 			name: name,
-			angle: angle,
 		),
 	)
 }
