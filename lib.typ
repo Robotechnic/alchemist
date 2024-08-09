@@ -6,6 +6,8 @@
 #import "src/links.typ" : *
 #import "src/molecule.typ" : *
 
+#let transparent = color.rgb(100%,0,0,0)
+
 /// === Molecule function
 /// Build a molecule group based on mol
 /// Each molecule is represented as an optional count followed by a molecule name
@@ -22,7 +24,7 @@
 /// })
 ///```)
 /// - name (content): The name of the molecule. It is used as the cetz name of the molecule and to link other molecules to it.
-/// - links (dictionary): The links between this molecule and the previous ones. The key is the name of the molecule and the value is the link you want to draw between the two molecules.
+/// - links (dictionary): The links between this molecule and previous molecules or hooks. The key is the name of the molecule or hook and the value is the link function.
 ///
 /// Note that the antom-sep and angle arguments are ignored
 /// - mol (string, equation): The string representing the molecule or an equation of the molecule
@@ -44,6 +46,22 @@
       count: atoms.len(),
     ),
   )
+}
+
+/// === Hooks
+/// Create a hook in the molecule. It allows tu connect links to the place where the hook is.
+/// Hooks are placed after links or after a molecule. If the hook is after a molecule, an angle can be specified to place the hook.
+/// - name (string): The name of the hook
+/// - angle (angle): The angle of the hook around the molecule. This has no effect if the hook is placed after a link.
+/// -> drawable
+#let hook(name, angle: 0deg) = {
+	(
+		(
+			type: "hook",
+			name: name,
+			angle: angle,
+		),
+	)
 }
 
 /// === Branch and cycles
