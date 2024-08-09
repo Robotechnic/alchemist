@@ -4,28 +4,29 @@
 #import cetz.draw
 
 #let default-anchor = (type: "coord", anchor: (0, 0))
+#let max-int = 9223372036854775807
 
 #let default-ctx = (
 	// general
-  last-anchor: default-anchor,
-  group-id: 0,
-  link-id: 0,
-	links: (),
-  named-molecules: (:),
-  relative-angle: 0deg,
-  angle: 0deg,
+  last-anchor: default-anchor, // keep trace of the place to draw
+  group-id: 0,                 // id of the current group
+  link-id: 0,                  // id of the current link
+	links: (),                   // list of links to draw
+  hooks: (:),                  // list of hooks
+  relative-angle: 0deg,        // current global relative angle
+  angle: 0deg,                 // current global angle
 
-	// branch and cycle
-	first-branch: false,
+	// branch
+	first-branch: false,         // true if the next element is the first in a branch
 
 	// cycle
-	first-molecule: none,
-  in-cycle: false,
-  cycle-faces: 0,
-  faces-count: 0,
-  cycle-step-angle: 0deg,
-	record-edges: false,
-	vertex-anchors: (),
+	first-molecule: none,        // name of the first molecule in the cycle
+  in-cycle: false,             // true if we are in a cycle
+  cycle-faces: 0,              // number of faces in the current cycle
+  faces-count: 0,              // number of faces already drawn
+  cycle-step-angle: 0deg,      // angle between two faces in the cycle
+	record-vertex: false,        // true if the cycle should keep track of its vertices
+	vertex-anchors: (),          // list of the cycle vertices
 )
 
 #let set-last-anchor(ctx, anchor) = {
@@ -37,13 +38,13 @@
 
 #let link-molecule-index(angle, end, count) = {
   if not end {
-    if utils.angle-in-range(angle, 90deg, 270deg) {
+    if utils.angle-in-range-strict(angle, 90deg, 270deg) {
       0
     } else {
       count
     }
   } else {
-    if utils.angle-in-range(angle, 90deg, 270deg) {
+    if utils.angle-in-range-strict(angle, 90deg, 270deg) {
       count
     } else {
       0
@@ -179,10 +180,10 @@
 #let draw-molecule(mol, ctx) = {
   let name = mol.name
   if name != none {
-    if name in ctx.named-molecules {
+    if name in ctx.hooks {
       panic("Molecule with name " + name + " already exists")
     }
-    ctx.named-molecules.insert(name, mol)
+    ctx.hooks.insert(name, mol)
   } else {
     name = "molecule" + str(ctx.group-id)
   }
@@ -245,8 +246,8 @@
   if ctx.last-anchor.type == "molecule" {
     from-name = ctx.last-anchor.name
     from-pos = (name: from-name, anchor: "center")
-    if from-name not in ctx.named-molecules {
-      ctx.named-molecules.insert(from-name, ctx.last-anchor)
+    if from-name not in ctx.hooks {
+      ctx.hooks.insert(from-name, ctx.last-anchor)
     }
   } else if ctx.last-anchor.type == "link" {
     from-pos = ctx.last-anchor.name + "-end-anchor"
@@ -313,7 +314,7 @@
   }
   let length = link.at("atom-sep", default: ctx.config.atom-sep)
   let link-name = link.at("name", default: "link" + str(ctx.link-id))
-  if ctx.record-edges {
+  if ctx.record-vertex {
     if ctx.faces-count == 0 {
       ctx.vertex-anchors.push(from-pos)
     }
@@ -354,50 +355,60 @@
   )
 }
 
+/// Insert missing vertices in the cycle
+#let missing-vertices(ctx, vertex, cetz-ctx) = {
+  let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
+  for i in range(faces - vertex.len()) {
+    let (x, y, _) = vertex.last()
+    vertex.push((
+      x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+      y + atom-sep * calc.sin(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
+      0,
+    ))
+  }
+  vertex
+}
+
+#let cycle-center-radius(ctx, cetz-ctx, vertex) = {
+  let min-radius = max-int
+	let center = (0, 0)
+  let odd = calc.rem(faces, 2) == 1
+  for (i, v) in vertex.enumerate() {
+    if (ctx.config.debug) {
+      draw.circle(v, radius: .1em, fill: blue, stroke: blue)
+    }
+    let (x, y, _) = v
+    center = (center.at(0) + x, center.at(1) + y)
+    if odd {
+      let opposite1 = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
+      let opposite2 = calc.rem-euclid(i + calc.div-euclid(faces, 2) + 1, faces)
+      let (ox1, oy1, _) = vertex.at(opposite1)
+      let (ox2, oy2, _) = vertex.at(opposite2)
+      let radius = utils.distance-between(cetz-ctx, (x, y), ((ox1 + ox2) / 2, (oy1 + oy2) / 2)) / 2
+      if radius < min-radius {
+        min-radius = radius
+      }
+    } else {
+      let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
+      let (ox, oy, _) = vertex.at(opposite)
+      let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
+      if radius < min-radius {
+        min-radius = radius
+      }
+    }
+  }
+  ((center.at(0) / vertex.len(), center.at(1) / vertex.len()), min-radius)
+}
+
 #let draw-cycle-center-arc(ctx, name, arc) = {
   let faces = ctx.cycle-faces
   let vertex = ctx.vertex-anchors
   draw.get-ctx(cetz-ctx => {
-    let odd = calc.rem(faces, 2) == 1
     let (cetz-ctx, ..vertex) = cetz.coordinate.resolve(cetz-ctx, ..vertex)
     if vertex.len() < faces {
-      let atom-sep = utils.convert-length(cetz-ctx, ctx.config.atom-sep)
-      for i in range(faces - vertex.len()) {
-        let (x, y, _) = vertex.last()
-        vertex.push((
-          x + atom-sep * calc.cos(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
-          y + atom-sep * calc.sin(ctx.relative-angle + ctx.cycle-step-angle * (i + 1)),
-          0,
-        ))
-      }
+      vertex = missing-vertices(ctx, cetz-ctx)
     }
-    let center = (0, 0)
-    let min-radius = 9223372036854775807 // max int
-    for (i, v) in vertex.enumerate() {
-      if (ctx.config.debug) {
-        draw.circle(v, radius: .1em, fill: blue, stroke: blue)
-      }
-      let (x, y, _) = v
-      center = (center.at(0) + x, center.at(1) + y)
-      if odd {
-        let opposite1 = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
-        let opposite2 = calc.rem-euclid(i + calc.div-euclid(faces, 2) + 1, faces)
-        let (ox1, oy1, _) = vertex.at(opposite1)
-        let (ox2, oy2, _) = vertex.at(opposite2)
-        let radius = utils.distance-between(cetz-ctx, (x, y), ((ox1 + ox2) / 2, (oy1 + oy2) / 2)) / 2
-        if radius < min-radius {
-          min-radius = radius
-        }
-      } else {
-        let opposite = calc.rem-euclid(i + calc.div-euclid(faces, 2), faces)
-        let (ox, oy, _) = vertex.at(opposite)
-        let radius = utils.distance-between(cetz-ctx, (x, y), (ox, oy)) / 2
-        if radius < min-radius {
-          min-radius = radius
-        }
-      }
-    }
-    center = (center.at(0) / vertex.len(), center.at(1) / vertex.len())
+    let (center, min-radius) = cycle-center-radius(ctx, cetz-ctx, vertex)
     if name != none {
       draw.group(
         name: name,
@@ -407,7 +418,7 @@
       )
     }
     if arc != none {
-      if min-radius == 9223372036854775807 {
+      if min-radius == max-int {
         panic("The cycle has no opposite vertices")
       }
       if ctx.cycle-faces > 4 {
@@ -435,11 +446,11 @@
 }
 
 #let draw-molecule-links(mol, mol-name, ctx) = {
-  ctx.named-molecules.insert(mol-name, mol)
+  ctx.hooks.insert(mol-name, mol)
   let last-anchor = ctx.last-anchor
   for (to-name, (link,)) in mol.links {
     ctx.last-anchor = last-anchor
-    if to-name not in ctx.named-molecules {
+    if to-name not in ctx.hooks {
       panic("Molecule " + to-name + " does not exist")
     }
     ctx.links.push((
@@ -498,7 +509,7 @@
             ),
             element.draw,
           )
-          ctx.named-molecules += branch-ctx.named-molecules
+          ctx.hooks += branch-ctx.hooks
           ctx.links += branch-ctx.links
           ctx.group-id = branch-ctx.group-id
           ctx.link-id = branch-ctx.link-id
@@ -525,17 +536,17 @@
           let first-molecule = none
           if ctx.last-anchor.type == "molecule" {
             first-molecule = ctx.last-anchor.name
-            if first-molecule not in ctx.named-molecules {
-              ctx.named-molecules.insert(first-molecule, ctx.last-anchor)
+            if first-molecule not in ctx.hooks {
+              ctx.hooks.insert(first-molecule, ctx.last-anchor)
             }
           }
           let name = none
-          let record-edges = false
+          let record-vertex = false
           if "name" in element.args {
             name = element.args.at("name")
-            record-edges = true
+            record-vertex = true
           } else if "arc" in element.args {
-            record-edges = true
+            record-vertex = true
           }
           let (drawing, cycle-ctx, cetz-rec) = draw-molecules-and-link(
             (
@@ -548,20 +559,22 @@
               relative-angle: angle,
               first-molecule: first-molecule,
               angle: angle,
-              record-edges: record-edges,
+              record-vertex: record-vertex,
               vertex-anchors: (),
             ),
             element.draw,
           )
-          ctx.named-molecules += cycle-ctx.named-molecules
+          ctx.hooks += cycle-ctx.hooks
           ctx.links += cycle-ctx.links
           ctx.group-id = cycle-ctx.group-id
           ctx.link-id = cycle-ctx.link-id
           cetz-drawing += cetz-rec
           drawing
-          if record-edges {
+          if record-vertex {
             draw-cycle-center-arc(cycle-ctx, name, element.args.at("arc", default: none))
           }
+        } else if element.type == "hook" {
+
         } else {
           panic("Unknown element type " + element.type)
         }
@@ -676,14 +689,14 @@
         link.from = link-molecule-index(
           angle,
           false,
-          ctx.named-molecules.at(link.from-name).count - 1,
+          ctx.hooks.at(link.from-name).count - 1,
         )
       }
       if link.to == none {
         link.to = link-molecule-index(
           angle,
           true,
-          ctx.named-molecules.at(link.to-name).count - 1,
+          ctx.hooks.at(link.to-name).count - 1,
         )
       }
     }
@@ -702,7 +715,7 @@
       link.to = link-molecule-index(
         angle,
         true,
-        ctx.named-molecules.at(link.to-name).count - 1,
+        ctx.hooks.at(link.to-name).count - 1,
       )
       link.angle = angle
     } else if "angle" not in link {
