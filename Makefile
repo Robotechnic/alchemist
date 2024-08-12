@@ -15,7 +15,7 @@ module:
 	mkdir -p ./alchemist/src
 	cp ./typst.toml ./alchemist/typst.toml
 	cp ./LICENSE ./alchemist/LICENSE
-	cp ./*.typ ./alchemist/
+	cp ./lib.typ ./alchemist/
 	cp ./src/*.typ ./alchemist/src/
 	awk '/<!--EXCLUDE-->/, /<!--END-->/ {next} 1' ./README.md > ./alchemist/README.md
 
