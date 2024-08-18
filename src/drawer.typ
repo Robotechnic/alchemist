@@ -899,7 +899,7 @@
   )
 }
 
-#let draw-skeleton(config: default, name: none, anchor: none, body) = {
+#let draw-skeleton(config: default, name: none, mol-anchor: none, body) = {
   for (key, value) in default {
     if key not in config {
       config.insert(key, value)
@@ -921,8 +921,9 @@
   } else {
     group(
       name: name,
-			anchor: anchor,
+			anchor: mol-anchor,
       {
+				anchor("default", (0,0))
         atoms
         links
         cetz-drawing

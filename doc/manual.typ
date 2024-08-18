@@ -83,6 +83,28 @@ The main argument is a block of code that contains the drawing instructions. The
   ]
 ]
 
+== Drawing a molecule directly in Cetz
+
+Sometimes, you may want to draw a molecule directly in cetz. To do so, you can use the #cmd[draw-skeleton] function. This function is what is used internally by the #cmd[skeletize] function. 
+
+#command("draw-skeleton", arg(config: (:)), arg("body"))[
+	#argument("config", types: ((:)))[
+		Configuration of the drawing environment. See @config.
+	]
+	#argument("body", types: ("drawable"))[
+		The module to draw or any cetz drawable object.
+	]
+	#argument("name", types: (""), default: none)[
+		If a name is provided, the molecule will be placed in a cetz group with this name.
+	]
+	#argument("mol-anchor", types: (""), default: none)[
+		Anchor of the group. It is working the same way as the `anchor` argument of the cetz `group` function. The `default` anchor
+		of the molecule is the east anchor of the first atom or the starting point of the first link.
+	]
+]
+
+The usefulness of this function comes when you want to draw multiples molecules in the same cetz environment. See @exemple-cez.
+
 == Configuration <config>
 
 Th configuration dictionary that you can pass to skeletize defines a set of default values for a lot of parameters in alchemist.
@@ -874,6 +896,43 @@ The cycles centers can be accessed using the name of the cycle. If you name a cy
 	)
 })
 ```)
+
+#pagebreak()
+=== Multiple molecules
+
+Alchemist allows you to draw multiple molecules in the same cetz environment. This is useful when you want to draw things like reactions.
+
+#example(side-by-side: false, ```
+#cetz.canvas({
+	import cetz.draw: *
+	draw-skeleton(name: "mol1", {
+		cycle(6, {
+			single()
+			double()
+			single()
+			double()
+			single()
+			double()
+		})
+	})
+	line((to: "mol1.east", rel: (1em, 0)), (rel: (1, 0)), mark: (end: ">"))
+	set-origin((rel: (1em, 0)))
+	draw-skeleton(name: "mol2", mol-anchor: "west", {
+			molecule("X")
+			double(angle: 1)
+			molecule("Y")
+		})
+	line((to: "mol2.east", rel: (1em, 0)), (rel: (1, 0)), mark: (end: ">"))
+  set-origin((rel: (1em, 0)))
+	draw-skeleton(name: "mol3", {
+		molecule("S")
+		cram-filled-right()
+		molecule("T")
+	})
+})
+```)
+
+
 
 == Examples
 
