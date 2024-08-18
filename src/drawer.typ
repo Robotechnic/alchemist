@@ -31,12 +31,13 @@
 )
 
 #let set-last-anchor(ctx, anchor) = {
-  if ctx.last-anchor.type == "link" {
+  if ctx.last-anchor.type == "link"  and not ctx.last-anchor.at("drew", default: false) {
     ctx.links.push(ctx.last-anchor)
   }
   (..ctx, last-anchor: anchor)
 }
 
+/// Return the index to choose if the link connection is not overridden
 #let link-molecule-index(angle, end, count, vertical) = {
   if not end {
     if vertical and utils.angle-in-range-strict(angle, 0deg, 180deg) {
@@ -514,11 +515,20 @@
 }
 
 #let update-parent-context(parent-ctx, ctx) = {
+	let last-anchor = if parent-ctx.last-anchor != ctx.last-anchor {
+		(
+			..parent-ctx.last-anchor,
+			drew: true
+		)
+	} else {
+		parent-ctx.last-anchor
+	}
   (
     ..parent-ctx,
-    hooks: parent-ctx.hooks + ctx.hooks,
-    hooks-links: parent-ctx.hooks-links + ctx.hooks-links,
-    links: parent-ctx.links + ctx.links,
+		last-anchor: last-anchor,
+    hooks: ctx.hooks,
+    hooks-links: ctx.hooks-links,
+    links: ctx.links,
     group-id: ctx.group-id,
     link-id: ctx.link-id,
   )
@@ -640,7 +650,7 @@
           panic("Unknown element type " + element.type)
         }
       }
-      if ctx.last-anchor.type == "link" {
+      if ctx.last-anchor.type == "link" and not ctx.last-anchor.at("drew", default: false) {
         ctx.links.push(ctx.last-anchor)
       }
     },
