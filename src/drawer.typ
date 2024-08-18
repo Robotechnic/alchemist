@@ -200,7 +200,7 @@
     name = "molecule" + str(ctx.group-id)
   }
   let (group-anchor, side, coord) = if ctx.last-anchor.type == "coord" {
-    ("east", true, ctx.last-anchor.anchor)
+    ("west", true, ctx.last-anchor.anchor)
   } else if ctx.last-anchor.type == "link" {
     if ctx.last-anchor.to == none {
       ctx.last-anchor.to = link-molecule-index(
@@ -908,14 +908,14 @@
   let ctx = default-ctx
   ctx.angle = config.base-angle
   ctx.config = config
-  let (draw, ctx, cetz-drawing) = draw-molecules-and-link(ctx, body)
+  let (atoms, ctx, cetz-drawing) = draw-molecules-and-link(ctx, body)
   for (links, name, from-mol) in ctx.hooks-links {
     ctx = draw-hooks-links(links, name, ctx, from-mol)
   }
   let (links, _) = draw-link-decoration(ctx)
 
   if name == none {
-    draw
+    atoms
     links
     cetz-drawing
   } else {
@@ -923,7 +923,7 @@
       name: name,
 			anchor: anchor,
       {
-        draw
+        atoms
         links
         cetz-drawing
       },
