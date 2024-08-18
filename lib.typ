@@ -2,7 +2,7 @@
 #import "src/default.typ": default
 #import "src/utils.typ"
 #import "src/drawer.typ"
-#import "src/drawer.typ" : skeletize
+#import "src/drawer.typ" : skeletize, draw-skeleton
 #import "src/links.typ" : *
 #import "src/molecule.typ" : *
 

@@ -1,7 +1,7 @@
 #import "default.typ": default
 #import "@preview/cetz:0.2.2"
 #import "utils.typ"
-#import cetz.draw
+#import cetz.draw: *
 
 #let default-anchor = (type: "coord", anchor: (0, 0))
 #let max-int = 9223372036854775807
@@ -31,7 +31,7 @@
 )
 
 #let set-last-anchor(ctx, anchor) = {
-  if ctx.last-anchor.type == "link"  and not ctx.last-anchor.at("drew", default: false) {
+  if ctx.last-anchor.type == "link" and not ctx.last-anchor.at("drew", default: false) {
     ctx.links.push(ctx.last-anchor)
   }
   (..ctx, last-anchor: anchor)
@@ -108,8 +108,6 @@
 
 /// Draw a triangle between two molecules
 #let cram(from, to, ctx, args) = {
-  import cetz.draw: *
-
   let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
   let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
   let base-length = utils.convert-length(
@@ -128,7 +126,6 @@
 
 /// Draw a dashed triangle between two molecules
 #let dashed-cram(from, to, length, ctx, args) = {
-  import cetz.draw: *
   let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
   let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
   let base-length = utils.convert-length(
@@ -167,7 +164,7 @@
   for (id, eq) in mol.atoms.enumerate() {
     let name = str(id)
     // draw atoms of the group one after the other from left to right
-    draw.content(
+    content(
       name: name,
       anchor: if mol.vertical {
         "north"
@@ -202,7 +199,7 @@
   } else {
     name = "molecule" + str(ctx.group-id)
   }
-  let (anchor, side, coord) = if ctx.last-anchor.type == "coord" {
+  let (group-anchor, side, coord) = if ctx.last-anchor.type == "coord" {
     ("east", true, ctx.last-anchor.anchor)
   } else if ctx.last-anchor.type == "link" {
     if ctx.last-anchor.to == none {
@@ -213,9 +210,9 @@
         mol.vertical,
       )
     }
-    let anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
+    let group-anchor = link-molecule-anchor(ctx.last-anchor.to, mol.count)
     ctx.last-anchor.to-name = name
-    (anchor, false, ctx.last-anchor.name + "-end-anchor")
+    (group-anchor, false, ctx.last-anchor.name + "-end-anchor")
   } else {
     panic("A molecule must be linked to a coord or a link")
   }
@@ -227,19 +224,19 @@
   (
     ctx,
     {
-      draw.group(
+      group(
         anchor: if side {
-          anchor
+          group-anchor
         } else {
           "from" + str(ctx.group-id)
         },
         name: name,
         {
-          draw.set-origin(coord)
-          draw.anchor("default", (0, 0))
+          set-origin(coord)
+          anchor("default", (0, 0))
           draw-molecule-text(mol)
           if not side {
-            draw.anchor("from" + str(ctx.group-id), anchor)
+            anchor("from" + str(ctx.group-id), group-anchor)
           }
         },
       )
@@ -356,14 +353,14 @@
   (
     ctx,
     {
-      let anchor = (to: from-pos, rel: (angle: link-angle, radius: length))
+      let end-anchor = (to: from-pos, rel: (angle: link-angle, radius: length))
       if ctx.config.debug {
-        draw.line(from-pos, anchor, stroke: blue + .1em)
+        line(from-pos, end-anchor, stroke: blue + .1em)
       }
-      draw.group(
+      group(
         name: link-name + "-end-anchor",
         {
-          draw.anchor("default", anchor)
+          anchor("default", end-anchor)
         },
       )
     },
@@ -391,7 +388,7 @@
   let odd = calc.rem(faces, 2) == 1
   for (i, v) in vertex.enumerate() {
     if (ctx.config.debug) {
-      draw.circle(v, radius: .1em, fill: blue, stroke: blue)
+      circle(v, radius: .1em, fill: blue, stroke: blue)
     }
     let (x, y, _) = v
     center = (center.at(0) + x, center.at(1) + y)
@@ -416,42 +413,42 @@
   ((center.at(0) / vertex.len(), center.at(1) / vertex.len()), min-radius)
 }
 
-#let draw-cycle-center-arc(ctx, name, arc) = {
+#let draw-cycle-center-arc(ctx, name, center-arc) = {
   let faces = ctx.cycle-faces
   let vertex = ctx.vertex-anchors
-  draw.get-ctx(cetz-ctx => {
+  get-ctx(cetz-ctx => {
     let (cetz-ctx, ..vertex) = cetz.coordinate.resolve(cetz-ctx, ..vertex)
     if vertex.len() < faces {
       vertex = missing-vertices(ctx, cetz-ctx)
     }
     let (center, min-radius) = cycle-center-radius(ctx, cetz-ctx, vertex)
     if name != none {
-      draw.group(
+      group(
         name: name,
         {
-          draw.anchor("default", center)
+          anchor("default", center)
         },
       )
     }
-    if arc != none {
+    if center-arc != none {
       if min-radius == max-int {
         panic("The cycle has no opposite vertices")
       }
       if ctx.cycle-faces > 4 {
-        min-radius *= arc.at("radius", default: 0.7)
+        min-radius *= center-arc.at("radius", default: 0.7)
       } else {
-        min-radius *= arc.at("radius", default: 0.5)
+        min-radius *= center-arc.at("radius", default: 0.5)
       }
-      let start = arc.at("start", default: 0deg)
-      let end = arc.at("end", default: 360deg)
-      let delta = arc.at("delta", default: end - start)
+      let start = center-arc.at("start", default: 0deg)
+      let end = center-arc.at("end", default: 360deg)
+      let delta = center-arc.at("delta", default: end - start)
       center = (
         center.at(0) + min-radius * calc.cos(start),
         center.at(1) + min-radius * calc.sin(start),
       )
-      draw.arc(
+      arc(
         center,
-        ..arc,
+        ..center-arc,
         radius: min-radius,
         start: start,
         delta: delta,
@@ -515,17 +512,17 @@
 }
 
 #let update-parent-context(parent-ctx, ctx) = {
-	let last-anchor = if parent-ctx.last-anchor != ctx.last-anchor {
-		(
-			..parent-ctx.last-anchor,
-			drew: true
-		)
-	} else {
-		parent-ctx.last-anchor
-	}
+  let last-anchor = if parent-ctx.last-anchor != ctx.last-anchor {
+    (
+      ..parent-ctx.last-anchor,
+      drew: true,
+    )
+  } else {
+    parent-ctx.last-anchor
+  }
   (
     ..parent-ctx,
-		last-anchor: last-anchor,
+    last-anchor: last-anchor,
     hooks: ctx.hooks,
     hooks-links: ctx.hooks-links,
     links: ctx.links,
@@ -881,7 +878,6 @@
 }
 
 #let draw-link-decoration(ctx) = {
-  import cetz.draw: *
   (
     get-ctx(cetz-ctx => {
       for link in ctx.links {
@@ -903,7 +899,12 @@
   )
 }
 
-#let draw-skeleton(config: default, body) = {
+#let draw-skeleton(config: default, name: none, anchor: none, body) = {
+  for (key, value) in default {
+    if key not in config {
+      config.insert(key, value)
+    }
+  }
   let ctx = default-ctx
   ctx.angle = config.base-angle
   ctx.config = config
@@ -912,20 +913,26 @@
     ctx = draw-hooks-links(links, name, ctx, from-mol)
   }
   let (links, _) = draw-link-decoration(ctx)
-  {
+
+  if name == none {
     draw
     links
     cetz-drawing
+  } else {
+    group(
+      name: name,
+			anchor: anchor,
+      {
+        draw
+        links
+        cetz-drawing
+      },
+    )
   }
 }
 
 /// setup a molecule skeleton drawer
 #let skeletize(debug: false, background: none, config: (:), body) = {
-  for (key, value) in default {
-    if key not in config {
-      config.insert(key, value)
-    }
-  }
   if "debug" not in config {
     config.insert("debug", debug)
   }
