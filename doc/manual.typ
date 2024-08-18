@@ -1,5 +1,5 @@
 #import "@preview/mantys:0.1.4": *
-#import "@preview/alchemist:0.1.0"
+#import "@preview/alchemist:0.1.1"
 #import "@preview/cetz:0.2.2"
 
 #let infos = toml("../typst.toml")
