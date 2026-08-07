@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alchemist Chemistry Drawing"
+  short_description: "Draw chemical skeletal formulas in Typst with alchemist"
+  default_prompt: "Use $alchemist to draw chemical molecule structures in Typst documents with bonds, fragments, cycles, and Lewis structures."
