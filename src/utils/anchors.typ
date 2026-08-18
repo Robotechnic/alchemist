@@ -70,22 +70,21 @@
 /// - id (string): the fragment subpart id
 /// - margin (length): the margin around the fragment
 /// -> anchor: the anchor position around the fragment
-#let fragment-anchor(cetz-ctx, angle, fragment, id, fragment-margin) = {
+#let fragment-anchor(cetz-ctx, angle, fragment, id, fragment-margin, center: none) = {
   let angle = angles.angle-correction(angle)
   fragment-margin = convert-length(cetz-ctx, fragment-margin)
 
-  if fragment-margin == 0 {
-    let (cetz-ctx, center) = cetz.coordinate.resolve(
+  if center == none {
+    let (_, resolved) = cetz.coordinate.resolve(
       cetz-ctx,
       (name: fragment, anchor: (id, "mid")),
     )
-    return (center.at(0), center.at(1))
+    center = resolved
   }
 
-  let (cetz-ctx, center) = cetz.coordinate.resolve(
-    cetz-ctx,
-    (name: fragment, anchor: (id, "mid")),
-  )
+  if fragment-margin == 0 {
+    return (center.at(0), center.at(1))
+  }
   let (a, b) = if angles.angle-in-range(angle, 0deg, 90deg) {
     anchor-north-east(cetz-ctx, center, fragment-margin, fragment, id)
   } else if angles.angle-in-range(angle, 90deg, 180deg) {
@@ -170,28 +169,50 @@
   } else {
     (name: link.to-name, anchor: "mid")
   }
-  if link.to == none or link.from == none {
-    let angle = link.at(
-      "angle",
-      default: angles.angle-between(cetz-ctx, link.from-pos, to-pos),
+  // When the link pins both connection indices, the two connected sub-atoms are
+  // resolved once here: the angle and both ellipse anchors are derived from them.
+  // Measuring between the sub-atoms rather than between the whole fragment boxes
+  // makes the link point exactly from one atom to the other.
+  let pinned(name, id) = type(id) == int and id >= 0 and name != none
+  let (from-center, to-center) = if (
+    pinned(link.from-name, link.from) and pinned(link.to-name, link.to)
+  ) {
+    let (_, from-center) = cetz.coordinate.resolve(
+      cetz-ctx,
+      (name: link.from-name, anchor: (str(link.from), "mid")),
     )
-    link.angle = angle
-    if link.from == none {
-      link.from = link-fragment-index(
-        angle,
-        false,
-        ctx.hooks.at(link.from-name).count - 1,
-        ctx.hooks.at(link.from-name).vertical,
-      )
+    let (_, to-center) = cetz.coordinate.resolve(
+      cetz-ctx,
+      (name: link.to-name, anchor: (str(link.to), "mid")),
+    )
+    (from-center, to-center)
+  } else {
+    (none, none)
+  }
+  // the angle is needed for the ellipse anchors, even when both connection
+  // indices are already pinned by the link itself
+  if "angle" not in link {
+    link.angle = if from-center != none {
+      angles.angle-between(cetz-ctx, from-center, to-center)
+    } else {
+      angles.angle-between(cetz-ctx, link.from-pos, to-pos)
     }
-    if link.to == none {
-      link.to = link-fragment-index(
-        angle,
-        true,
-        ctx.hooks.at(link.to-name).count - 1,
-        ctx.hooks.at(link.to-name).vertical,
-      )
-    }
+  }
+  if link.from == none {
+    link.from = link-fragment-index(
+      link.angle,
+      false,
+      ctx.hooks.at(link.from-name).count - 1,
+      ctx.hooks.at(link.from-name).vertical,
+    )
+  }
+  if link.to == none {
+    link.to = link-fragment-index(
+      link.angle,
+      true,
+      ctx.hooks.at(link.to-name).count - 1,
+      ctx.hooks.at(link.to-name).vertical,
+    )
   }
   if link.from == -1 {
     link.from = 0
@@ -209,6 +230,7 @@
     } else {
       fragment-margin
     },
+    center: from-center,
   )
   let end = fragment-anchor(
     cetz-ctx,
@@ -220,6 +242,7 @@
     } else {
       fragment-margin
     },
+    center: to-center,
   )
   ((start, end), angles.angle-between(cetz-ctx, start, end))
 }

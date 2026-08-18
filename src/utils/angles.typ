@@ -1,4 +1,5 @@
 #import "@preview/cetz:0.5.2"
+#import "utils.typ": resolve-point
 
 /// Convert any angle to an angle between 0deg and 360deg
 #let angle-correction(a) = {
@@ -63,10 +64,9 @@
 /// - from (anchor): The first anchor
 /// - to (anchor): The second anchor
 #let angle-between(ctx, from, to) = {
-  let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
-  let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
-  let angle = calc.atan2(to-x - from-x, to-y - from-y)
-  angle
+  let (from-x, from-y) = resolve-point(ctx, from)
+  let (to-x, to-y) = resolve-point(ctx, to)
+  calc.atan2(to-x - from-x, to-y - from-y)
 }
 
 /// Calculate the angle from an object with "relative", "absolute" or "angle" key

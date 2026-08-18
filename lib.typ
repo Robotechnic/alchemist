@@ -1,6 +1,7 @@
 #import "@preview/cetz:0.5.2"
 #import "src/default.typ": default
 #import "src/utils/utils.typ"
+#import "src/elements/chem/chem.typ": chem, draw-chem, formula, reaction, rxn-arrow, curly-arrow
 #import "src/drawer.typ"
 #import "src/drawer.typ": skeletize, draw-skeleton, skeletize-config, draw-skeleton-config, hide-drawables
 #import "src/elements/links.typ": *

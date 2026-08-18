@@ -46,7 +46,10 @@
 #let draw-hooks-links(links, mol-name, ctx, from-mol, ignore-from-margin) = {
   let hook-id = 0
   for (to-name, (link,)) in links {
-    if link.at(mol-name, default: none) == none {
+    // a link the user did not name gets a generated one, and no cetz node: there
+    // is no stable name to reference it by (see draw-link-decoration)
+    let auto-name = link.at("name", default: none) == none
+    if auto-name {
       link.name = mol-name + "-hook-" + str(hook-id)
       hook-id += 1
     }
@@ -59,6 +62,7 @@
         type: "link",
         hide: ctx.hide,
         name: link.at("name"),
+        auto-name: auto-name,
         from-pos: if from-mol {
           if ignore-from-margin {
             (name: mol-name)
@@ -72,8 +76,10 @@
           mol-name
         },
         to-name: to-name,
-        from: none,
-        to: none,
+        // as for turtle links, the connection index can be pinned on either end;
+        // `none` lets the angle decide which side of the fragment is used
+        from: link.at("from", default: none),
+        to: link.at("to", default: none),
         over: link.at("over", default: none),
         override: angles.angle-override(ctx.angle, ctx),
         draw: link.draw,
@@ -89,6 +95,7 @@
         },
         hide: ctx.hide,
         name: link.at("name"),
+        auto-name: auto-name,
         from-pos: if from-mol {
           if ignore-from-margin {
             (name: mol-name)
@@ -121,8 +128,14 @@
   let cetz-drawing = ()
   ctx.first-draw = true
   for element in body {
+    // Skip excess elements in cycle, but allow nested cycles and branches
+    // (they represent fused/spiro structures at the closing position)
     if ctx.in-cycle and ctx.faces-count >= ctx.cycle-faces {
-      continue
+      if type(element) == dictionary and element.at("type", default: none) in ("cycle", "branch") {
+        // Allow nested cycles and branches to be processed
+      } else {
+        continue
+      }
     }
     let drawing = ()
     let cetz-rec = ()
@@ -255,7 +268,12 @@
             circle(to, radius: .1em, fill: red, stroke: red)
           }
           let length = distance-between(cetz-ctx, from, to)
-          hide(line(from, to, name: link.name))
+          // the node exists so that named links can be referenced from cetz code;
+          // a link the user did not name has no stable name to be referenced by,
+          // so it is not worth a node (`over` needs one to intersect against)
+          if not link.at("auto-name", default: false) or link.at("over") != none {
+            hide(line(from, to, name: link.name))
+          }
           if link.at("over") != none {
             if type(link.at("over")) == array {
               for over in link.at("over") {
@@ -307,6 +325,7 @@
           }
         } else if element.type == "link" {
           element.name = "link-" + str(link-id)
+          element.auto-name = true
           link-id += 1
         } else if element.type == "operator" {
           element.name = "operator-" + str(operator-id)
@@ -421,19 +440,22 @@
           }
 
 
-          let transform-matrix = cetz.matrix.transform-translate(
-            translate-x,
-            translate-y,
-            0,
-          )
-          // panic(anchors)
-          for name in anchors {
-            let hold-anchors = cetz-ctx.nodes.at(name).anchors
-            cetz-ctx.nodes.at(name).anchors = name => {
-              if name != () {
-                cetz.matrix.mul4x4-vec3(transform-matrix, hold-anchors(name))
-              } else {
-                hold-anchors(name)
+          // without a translation the wrapper below is the identity, and it would
+          // make every later anchor resolution go through a matrix product
+          if translate-x != 0 or translate-y != 0 {
+            let transform-matrix = cetz.matrix.transform-translate(
+              translate-x,
+              translate-y,
+              0,
+            )
+            for name in anchors {
+              let hold-anchors = cetz-ctx.nodes.at(name).anchors
+              cetz-ctx.nodes.at(name).anchors = name => {
+                if name != () {
+                  cetz.matrix.mul4x4-vec3(transform-matrix, hold-anchors(name))
+                } else {
+                  hold-anchors(name)
+                }
               }
             }
           }

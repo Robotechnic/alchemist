@@ -7,7 +7,15 @@ license = "MIT"
 compiler = "0.14.0"
 repository = "https://github.com/Typsium/alchemist"
 description = "A package to render skeletal formulas using CeTZ"
-exclude = ["generate_images.sh", "generate_images.awk", ".gitignore","images"]
+exclude = [
+    "generate_images.sh",
+    "generate_images.awk",
+    ".gitignore",
+    "images",
+    # molecule-engine build sources; only the built *.wasm ships in the package
+    "src/elements/chem/engine",
+    "src/elements/chem/coordgen",
+]
 categories = ["visualization", "paper"]
 disciplines = ["education", "chemistry", "biology"]
 keywords = ["chemistry", "chemical", "formula", "molecule", "chemiviz", "structure", "organic", "lewis", "bond", "aromatic"]

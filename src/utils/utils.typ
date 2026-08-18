@@ -11,15 +11,29 @@
   }
 }
 
+/// Resolve an anchor to its (x, y) position. Coordinates that are already plain
+/// numbers — every anchor computed by `anchors.typ`, and every link end — skip
+/// cetz's resolver, which is the hot path when a drawing has many links.
+///
+/// - ctx (cetz-ctx): the cetz context
+/// - point (anchor): the anchor to resolve
+/// -> the (x, y) position
+#let resolve-point(ctx, point) = {
+  if type(point) == array and point.len() >= 2 {
+    let (x, y, ..) = point
+    if type(x) in (int, float) and type(y) in (int, float) {
+      return (float(x), float(y))
+    }
+  }
+  let (_, (x, y, ..)) = cetz.coordinate.resolve(ctx, point)
+  (x, y)
+}
+
 /// get the distance between two anchors
 #let distance-between(ctx, from, to) = {
-  let (ctx, (from-x, from-y, _)) = cetz.coordinate.resolve(ctx, from)
-  let (ctx, (to-x, to-y, _)) = cetz.coordinate.resolve(ctx, to)
-  let distance = calc.sqrt(calc.pow(to-x - from-x, 2) + calc.pow(
-    to-y - from-y,
-    2,
-  ))
-  distance
+  let (from-x, from-y) = resolve-point(ctx, from)
+  let (to-x, to-y) = resolve-point(ctx, to)
+  calc.sqrt(calc.pow(to-x - from-x, 2) + calc.pow(to-y - from-y, 2))
 }
 
 /// merge two imbricated dictionaries together

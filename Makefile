@@ -2,9 +2,27 @@ VERSION := $(shell sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' typst.toml)
 PACKAGE_NAME := $(shell sed -n 's/^name\s*=\s*"\(.*\)"/\1/p' typst.toml)
 TARGET_DIR=./$(PACKAGE_NAME)/$(VERSION)
 
+ENGINE_DIR=src/elements/chem
+
+.PHONY: check plugin coordgen plugin-test link clean-link module manual watch bump-cetz
+
 check:
 	typst compile ./lib.typ
 	rm ./lib.pdf
+
+# Build the Rust/WASM molecule engine and copy it into the package.
+plugin:
+	cd $(ENGINE_DIR)/engine && cargo build --release --target wasm32-unknown-unknown
+	cp $(ENGINE_DIR)/engine/target/wasm32-unknown-unknown/release/alchemist_chem_engine.wasm \
+		$(ENGINE_DIR)/chem.wasm
+
+plugin-test:
+	cd $(ENGINE_DIR)/engine && cargo test
+
+# Build the CoordgenLibs 2D-coordinate plugin and copy it into the package.
+# Needs emscripten + binaryen (provided here via nix). See $(ENGINE_DIR)/coordgen/build.sh.
+coordgen:
+	bash $(ENGINE_DIR)/coordgen/build.sh
 
 link :
 	mkdir -p ~/.cache/typst/packages/preview/${PACKAGE_NAME}

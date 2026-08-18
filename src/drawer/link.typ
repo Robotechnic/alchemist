@@ -67,6 +67,7 @@
       type: "link",
       hide: ctx.hide,
       name: link-name,
+      auto-name: link.at("auto-name", default: false),
       override: override,
       from-pos: link-name + "-start-anchor",
       from-name: from-name,

@@ -1,6 +1,6 @@
 #import "@preview/mantys:1.0.2": *
 #import "../lib.typ" as alchemist
-#import "@preview/cetz:0.4.0"
+#import "@preview/cetz:0.5.2"
 
 #let infos = toml("../typst.toml")
 #show: mantys(
@@ -262,6 +262,17 @@ All the lewis elements have two common arguments to control their position:
 #tidy-module(
   "alchemist-lewis",
   read("../src/elements/lewis.typ"),
+  show-outline: false,
+  first-heading-level: 3,
+  legacy-parser: true,
+)
+
+=== Molecule engine <molecule-engine-cmds>
+High-level declarative API. See @molecule-engine for a usage walkthrough.
+
+#tidy-module(
+  "alchemist-chem",
+  read("../src/elements/chem/chem.typ"),
   show-outline: false,
   first-heading-level: 3,
   legacy-parser: true,
@@ -1741,4 +1752,139 @@ The following examples are the same ones as in the Chemfig documentation. They a
 		single()
 	})
 })
+```)
+
+= Molecule engine <molecule-engine>
+
+Everything above builds a molecule by hand, one fragment and link at a time. The
+molecule engine is the high-level alternative: you give #cmd[chem] a structure as
+a short string — either the readable #link(<dsl>)[DSL] or #link("https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system")[SMILES] — and a Rust/WASM
+engine (backed by Schrödinger's CoordgenLibs) computes clean 2D coordinates,
+which alchemist draws with IUPAC-style orientation. You never place an atom
+yourself, and there is just one function to learn: #cmd[chem] returns
+ready-to-place content, so you call it directly in your document.
+
+```typ
+#chem("CC(=O)Oc1ccccc1C(=O)O", format: "smiles") // aspirin
+```
+#align(center, chem("CC(=O)Oc1ccccc1C(=O)O", format: "smiles"))
+
+The engine is a layout layer, not a second renderer: its coordinates are turned
+into ordinary alchemist elements — each atom is a fragment placed at an absolute
+position, each bond a link between two of them — and #cmd[draw-skeleton] draws
+them. A generated molecule therefore uses the same configuration, the same link
+styles and the same cetz anchors as a hand-drawn one, and both can live in the
+same drawing.
+
+== The DSL <dsl>
+
+The default `format` is the alchemist DSL, a compact line notation:
+
+#table(
+  columns: (auto, 1fr),
+  [*Syntax*], [*Meaning*],
+  [`C`, `O`, `Cl`, …], [atoms (condensed groups like `CH3`, `NH2`, `COOH` too)],
+  [`-` `=` `#`], [single / double / triple bond],
+  [`>` `<` `:>` `<:`], [stereo wedges (solid / hashed)],
+  [`(-OH)` `(=O)`], [a branch (starts with a bond)],
+  [`@6` `@6(N)`], [a ring; the body lists vertices, bonds are inferred],
+  [`:name`], [label an atom for cross-linking / anchors],
+  [`^+` `^2-`], [a charge],
+)
+
+In a ring body each vertex is a single atom — a plain `C` is a skeletal corner, a
+heteroatom is labelled, and substituents hang off as branches. You don't draw the
+ring bonds: a 6-membered carbon/nitrogen ring is aromatised automatically, so
+`@6` is benzene, `@6(N)` pyridine and `@6(C(-CH3)CCCCC)` toluene. Write the bonds
+explicitly to override — `@6(------)` is cyclohexane.
+
+#example(```
+#chem("@6")        // benzene
+#chem("@6(N)")     // pyridine
+#chem("@6(C(-CH3)C(-CH3)CCCC)") // o-xylene
+```)
+
+#example(```
+#chem("CH3-C(=O)-OH") // acetic acid
+```)
+
+== SMILES input
+
+Pass `format: "smiles"` to read SMILES instead. The organic subset, lowercase
+aromatic atoms (Kekulised automatically), ring-closure digits and stereo
+(`@`/`@@`, `/`\/`\`) are supported.
+
+#example(```
+#chem("c1ccncc1", format: "smiles") // pyridine
+```)
+
+#example(```
+#chem("N[C@@H](C)C(=O)O", format: "smiles") // L-alanine
+```)
+
+== Stereochemistry
+
+Tetrahedral configuration comes from SMILES `@`/`@@` and double-bond geometry from
+`/` and `\`; in the DSL, draw wedges directly with `>` `<` (solid) and `:>` `<:`
+(hashed).
+
+#example(```
+#chem("F/C=C/F", format: "smiles")        // (E) trans
+#chem("CH3-C(>OH)(-NH2)-H")               // DSL solid wedge
+#chem("CH3-C(:>OH)(-NH2)-H")              // DSL hashed wedge
+```)
+
+== Orientation and rendering options
+
+Extra named arguments are forwarded to the layout and the renderer:
+
+/ #arg(orientation: "iupac"): `"iupac"` (default) applies the GR-3 canonical
+  orientation; `"as-written"` keeps coordgen's raw pose.
+/ #arg(rotation: 0deg): rotate the whole molecule.
+/ #arg(color: false): colour atoms with the Jmol CPK palette.
+/ #arg(lone-pairs: none): draw lone pairs as `"dots"` or `"lines"`.
+/ #arg(aromatic: none): `"circle"` draws the aromatic delocalisation circle.
+/ #arg(scale: 1): scale the drawing.
+
+#example(```
+#chem("c1ccccc1", format: "smiles", aromatic: "circle")
+```)
+
+#example(```
+#chem("CCO", format: "smiles", color: true, lone-pairs: "dots")
+```)
+
+== Electron-pushing arrows
+
+Curly arrows are addressed by atom id through the `arrows` option: each entry is
+`(from, to)` (or `(from, to, side)` to flip the bow). The arrow is drawn clear of
+the bonds and curves in to point at the target atom — no Cetz anchors involved.
+Atom ids are the 0-based index of each atom in the source string.
+
+#example(
+  side-by-side: false,
+  ```
+  #chem("CH3-C(=O)-CH3", scale: 1.4, arrows: ((1, 2),)) // C=O π → O
+  ```,
+)
+
+== Reactions
+
+#cmd[reaction] arranges molecules, `[+]` separators and #cmd[rxn-arrow] arrows
+into a horizontal scheme. Because #cmd[chem] is content, it drops straight in.
+
+#example(```
+#reaction(
+  chem("CH3-C(=O)-OH"), [+], chem("CH3-CH2-OH"),
+  rxn-arrow(above: [H#super[+]]),
+  chem("CH3-C(=O)-O-CH2-CH3"), [+], chem("OH2"),
+)
+```)
+
+== Molecular formula
+
+#cmd[formula] returns the molecular formula in Hill order as formatted content.
+
+#example(```
+#formula("CC(=O)O", format: "smiles")
 ```)
